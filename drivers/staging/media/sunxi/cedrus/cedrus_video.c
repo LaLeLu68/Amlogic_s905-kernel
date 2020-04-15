@@ -387,17 +387,27 @@ static int cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct v4l2_pix_format *pix_fmt;
+	unsigned int extra_size = 0;
 
-	if (V4L2_TYPE_IS_OUTPUT(vq->type))
+	if (V4L2_TYPE_IS_OUTPUT(vq->type)) {
 		pix_fmt = &ctx->src_fmt;
-	else
+	} else {
 		pix_fmt = &ctx->dst_fmt;
 
+		/* The HEVC decoder needs extra size on the output buffer. */
+		if (ctx->src_fmt.pixelformat == V4L2_PIX_FMT_HEVC_SLICE) {
+			extra_size = DIV_ROUND_UP(pix_fmt->width, 4);
+			extra_size = ALIGN(extra_size, 32);
+			extra_size *= ALIGN(pix_fmt->height, 16) * 3;
+			extra_size /= 2;
+		}
+	}
+
 	if (*nplanes) {
-		if (sizes[0] < pix_fmt->sizeimage)
-			return -EINVAL;
+		if (sizes[0] < (pix_fmt->sizeimage + extra_size))
+			sizes[0] = pix_fmt->sizeimage + extra_size;
 	} else {
-		sizes[0] = pix_fmt->sizeimage;
+		sizes[0] = pix_fmt->sizeimage + extra_size;
 		*nplanes = 1;
 	}
 
