@@ -75,7 +75,7 @@ static irqreturn_t esparser_isr(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
-/**
+/*
  * VP9 frame headers need to be appended by a 16-byte long
  * Amlogic custom header
  */

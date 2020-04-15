@@ -769,11 +769,6 @@ static void hdmi_enable_audio_clk(struct dw_hdmi *hdmi, bool enable)
 	else
 		hdmi->mc_clkdis |= HDMI_MC_CLKDIS_AUDCLK_DISABLE;
 	hdmi_writeb(hdmi, hdmi->mc_clkdis, HDMI_MC_CLKDIS);
-
-	if (enable) {
-		hdmi_set_cts_n(hdmi, hdmi->audio_cts, 0);
-		hdmi_set_cts_n(hdmi, hdmi->audio_cts, hdmi->audio_n);
-	}
 }
 
 static void dw_hdmi_ahb_audio_enable(struct dw_hdmi *hdmi)
@@ -1915,7 +1910,6 @@ static void hdmi_av_composer(struct dw_hdmi *hdmi,
 	int hblank, vblank, h_de_hs, v_de_vs, hsync_len, vsync_len;
 	unsigned int vdisplay, hdisplay;
 
-//	vmode->mtmdsclock = vmode->mpixelclock = mode->clock * 1000;
 	vmode->mpixelclock = mode->clock * 1000;
 
 	dev_dbg(hdmi->dev, "final pixclk = %d\n", vmode->mpixelclock);
@@ -1926,13 +1920,13 @@ static void hdmi_av_composer(struct dw_hdmi *hdmi,
 		switch (hdmi_bus_fmt_color_depth(
 				hdmi->hdmi_data.enc_out_bus_format)) {
 		case 16:
-			vmode->mtmdsclock = (u64)vmode->mpixelclock * 2;
+			vmode->mtmdsclock = vmode->mpixelclock * 2;
 			break;
 		case 12:
-			vmode->mtmdsclock = (u64)vmode->mpixelclock * 3 / 2;
+			vmode->mtmdsclock = vmode->mpixelclock * 3 / 2;
 			break;
 		case 10:
-			vmode->mtmdsclock = (u64)vmode->mpixelclock * 5 / 4;
+			vmode->mtmdsclock = vmode->mpixelclock * 5 / 4;
 			break;
 		}
 	}
@@ -1940,7 +1934,7 @@ static void hdmi_av_composer(struct dw_hdmi *hdmi,
 	if (hdmi_bus_fmt_is_yuv420(hdmi->hdmi_data.enc_out_bus_format))
 		vmode->mtmdsclock /= 2;
 
-	dev_dbg(hdmi->dev, "final tmdsclk = %d\n", vmode->mtmdsclock);
+	dev_dbg(hdmi->dev, "final tmdsclock = %d\n", vmode->mtmdsclock);
 
 	/* Set up HDMI_FC_INVIDCONF */
 	inv_val = (hdmi->hdmi_data.hdcp_enable ||
@@ -2574,8 +2568,8 @@ static const struct drm_connector_helper_funcs dw_hdmi_connector_helper_funcs = 
  * - MEDIA_BUS_FMT_RGB888_1X24,
  */
 
-/* Can return a maximum of 12 possible output formats for a mode/connector */
-#define MAX_OUTPUT_SEL_FORMATS	12
+/* Can return a maximum of 11 possible output formats for a mode/connector */
+#define MAX_OUTPUT_SEL_FORMATS	11
 
 static u32 *dw_hdmi_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
 					struct drm_bridge_state *bridge_state,
@@ -2590,7 +2584,7 @@ static u32 *dw_hdmi_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
 	bool is_hdmi2_sink = info->hdmi.scdc.supported ||
 			     (info->color_formats & DRM_COLOR_FORMAT_YCRCB420);
 	u32 *output_fmts;
-	int i = 0;
+	unsigned int i = 0;
 
 	*num_output_fmts = 0;
 
@@ -2598,6 +2592,14 @@ static u32 *dw_hdmi_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
 			      GFP_KERNEL);
 	if (!output_fmts)
 		return NULL;
+
+	/* If dw-hdmi is the only bridge, avoid negociating with ourselves */
+	if (list_is_singular(&bridge->encoder->bridge_chain)) {
+		*num_output_fmts = 1;
+		output_fmts[0] = MEDIA_BUS_FMT_FIXED;
+
+		return output_fmts;
+	}
 
 	/*
 	 * If the current mode enforces 4:2:0, force the output but format
@@ -2693,8 +2695,8 @@ static u32 *dw_hdmi_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
  * - MEDIA_BUS_FMT_UYYVYY16_0_5X48
  */
 
-/* Can return a maximum of 4 possible input formats for an output format */
-#define MAX_INPUT_SEL_FORMATS	4
+/* Can return a maximum of 3 possible input formats for an output format */
+#define MAX_INPUT_SEL_FORMATS	3
 
 static u32 *dw_hdmi_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 					struct drm_bridge_state *bridge_state,
@@ -2704,7 +2706,7 @@ static u32 *dw_hdmi_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 					unsigned int *num_input_fmts)
 {
 	u32 *input_fmts;
-	int i = 0;
+	unsigned int i = 0;
 
 	*num_input_fmts = 0;
 
@@ -2714,6 +2716,10 @@ static u32 *dw_hdmi_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 		return NULL;
 
 	switch (output_fmt) {
+	/* If MEDIA_BUS_FMT_FIXED is tested, return default bus format */
+	case MEDIA_BUS_FMT_FIXED:
+		input_fmts[i++] = MEDIA_BUS_FMT_RGB888_1X24;
+		break;
 	/* 8bit */
 	case MEDIA_BUS_FMT_RGB888_1X24:
 		input_fmts[i++] = MEDIA_BUS_FMT_RGB888_1X24;
@@ -2775,7 +2781,7 @@ static u32 *dw_hdmi_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 		input_fmts[i++] = MEDIA_BUS_FMT_RGB161616_1X48;
 		break;
 
-	/* 420 */
+	/*YUV 4:2:0 */
 	case MEDIA_BUS_FMT_UYYVYY8_0_5X24:
 	case MEDIA_BUS_FMT_UYYVYY10_0_5X30:
 	case MEDIA_BUS_FMT_UYYVYY12_0_5X36:
@@ -2801,28 +2807,32 @@ static int dw_hdmi_bridge_atomic_check(struct drm_bridge *bridge,
 {
 	struct dw_hdmi *hdmi = bridge->driver_private;
 
-	dev_dbg(hdmi->dev, "selected output format %x\n",
-			bridge_state->output_bus_cfg.format);
-
 	hdmi->hdmi_data.enc_out_bus_format =
 			bridge_state->output_bus_cfg.format;
-
-	dev_dbg(hdmi->dev, "selected input format %x\n",
-			bridge_state->input_bus_cfg.format);
 
 	hdmi->hdmi_data.enc_in_bus_format =
 			bridge_state->input_bus_cfg.format;
 
+	dev_dbg(hdmi->dev, "input format 0x%04x, output format 0x%04x\n",
+		bridge_state->input_bus_cfg.format,
+		bridge_state->output_bus_cfg.format);
+
 	return 0;
 }
 
-static int dw_hdmi_bridge_attach(struct drm_bridge *bridge)
+static int dw_hdmi_bridge_attach(struct drm_bridge *bridge,
+				 enum drm_bridge_attach_flags flags)
 {
 	struct dw_hdmi *hdmi = bridge->driver_private;
 	struct drm_encoder *encoder = bridge->encoder;
 	struct drm_connector *connector = &hdmi->connector;
 	struct cec_connector_info conn_info;
 	struct cec_notifier *notifier;
+
+	if (flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR) {
+		DRM_ERROR("Fix bridge driver to make connector optional!");
+		return -EINVAL;
+	}
 
 	connector->interlace_allowed = 1;
 	connector->polled = DRM_CONNECTOR_POLL_HPD;
@@ -2834,6 +2844,10 @@ static int dw_hdmi_bridge_attach(struct drm_bridge *bridge)
 				    DRM_MODE_CONNECTOR_HDMIA,
 				    hdmi->ddc);
 
+	/*
+	 * drm_connector_attach_max_bpc_property() requires the
+	 * connector to have a state.
+	 */
 	drm_atomic_helper_connector_reset(connector);
 
 	drm_connector_attach_max_bpc_property(connector, 8, 16);
@@ -3387,7 +3401,6 @@ __dw_hdmi_probe(struct platform_device *pdev,
 
 	hdmi->bridge.driver_private = hdmi;
 	hdmi->bridge.funcs = &dw_hdmi_bridge_funcs;
-
 #ifdef CONFIG_OF
 	hdmi->bridge.of_node = pdev->dev.of_node;
 #endif
@@ -3531,7 +3544,7 @@ struct dw_hdmi *dw_hdmi_bind(struct platform_device *pdev,
 	if (IS_ERR(hdmi))
 		return hdmi;
 
-	ret = drm_bridge_attach(encoder, &hdmi->bridge, NULL);
+	ret = drm_bridge_attach(encoder, &hdmi->bridge, NULL, 0);
 	if (ret) {
 		dw_hdmi_remove(hdmi);
 		DRM_ERROR("Failed to initialize bridge with drm\n");

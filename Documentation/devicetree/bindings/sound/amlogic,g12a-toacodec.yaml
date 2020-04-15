@@ -44,10 +44,8 @@ examples:
     #include <dt-bindings/reset/amlogic,meson-g12a-audio-reset.h>
 
     toacodec: audio-controller@740 {
-    	compatible = "amlogic,g12a-toacodec";
+        compatible = "amlogic,g12a-toacodec";
         reg = <0x0 0x740 0x0 0x4>;
         #sound-dai-cells = <1>;
         resets = <&clkc_audio AUD_RESET_TOACODEC>;
     };
-
-

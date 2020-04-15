@@ -70,7 +70,7 @@ patternProperties:
           rate
 
       sound-dai:
-        $ref: /schemas/types.yaml#/definitions/phandle
+        $ref: /schemas/types.yaml#/definitions/phandle-array
         description: phandle of the CPU DAI
 
     patternProperties:
@@ -82,7 +82,7 @@ patternProperties:
           at one slot, so at least one these mask should be provided with
           an enabled slot.
 
-      "^codec-[0-9]+$":
+      "^codec(-[0-9]+)?$":
         type: object
         description: |-
           Codecs:
@@ -92,7 +92,7 @@ patternProperties:
 
         properties:
           sound-dai:
-            $ref: /schemas/types.yaml#/definitions/phandle
+            $ref: /schemas/types.yaml#/definitions/phandle-array
             description: phandle of the codec DAI
 
         patternProperties:
@@ -170,7 +170,7 @@ examples:
                 };
         };
 
-        dai-link@3 {
+        dai-link-3 {
                 sound-dai = <&spdifout>;
 
                 codec {

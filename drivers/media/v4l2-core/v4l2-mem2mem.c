@@ -561,6 +561,13 @@ int v4l2_m2m_querybuf(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 }
 EXPORT_SYMBOL_GPL(v4l2_m2m_querybuf);
 
+/*
+ * This will add the LAST flag and mark the buffer management
+ * state as stopped.
+ * This is called when the last capture buffer must be flagged as LAST
+ * in draining mode from the encoder/decoder driver buf_queue() callback
+ * or from v4l2_update_last_buf_state() when a capture buffer is available.
+ */
 void v4l2_m2m_last_buffer_done(struct v4l2_m2m_ctx *m2m_ctx,
 			       struct vb2_v4l2_buffer *vbuf)
 {
@@ -571,7 +578,8 @@ void v4l2_m2m_last_buffer_done(struct v4l2_m2m_ctx *m2m_ctx,
 }
 EXPORT_SYMBOL_GPL(v4l2_m2m_last_buffer_done);
 
-static int v4l2_mark_last_buf(struct v4l2_m2m_ctx *m2m_ctx)
+/* When stop command is issued, update buffer management state */
+static int v4l2_update_last_buf_state(struct v4l2_m2m_ctx *m2m_ctx)
 {
 	struct vb2_v4l2_buffer *next_dst_buf;
 
@@ -584,11 +592,26 @@ static int v4l2_mark_last_buf(struct v4l2_m2m_ctx *m2m_ctx)
 	m2m_ctx->last_src_buf = v4l2_m2m_last_src_buf(m2m_ctx);
 	m2m_ctx->is_draining = true;
 
+	/*
+	 * The processing of the last output buffer queued before
+	 * the STOP command is expected to mark the buffer management
+	 * state as stopped with v4l2_m2m_mark_stopped().
+	 */
 	if (m2m_ctx->last_src_buf)
 		return 0;
 
+	/*
+	 * In case the output queue is empty, try to mark the last capture
+	 * buffer as LAST.
+	 */
 	next_dst_buf = v4l2_m2m_dst_buf_remove(m2m_ctx);
 	if (!next_dst_buf) {
+		/*
+		 * Wait for the next queued one in encoder/decoder driver
+		 * buf_queue() callback using the v4l2_m2m_dst_buf_is_last()
+		 * helper or in v4l2_m2m_qbuf() if encoder/decoder is not yet
+		 * streaming.
+		 */
 		m2m_ctx->next_buf_last = true;
 		return 0;
 	}
@@ -598,16 +621,34 @@ static int v4l2_mark_last_buf(struct v4l2_m2m_ctx *m2m_ctx)
 	return 0;
 }
 
-void v4l2_m2m_start_streaming(struct v4l2_m2m_ctx *m2m_ctx, struct vb2_queue *q)
+/*
+ * Updates the encoding/decoding buffer management state, should
+ * be called from encoder/decoder drivers start_streaming()
+ */
+void v4l2_m2m_update_start_streaming_state(struct v4l2_m2m_ctx *m2m_ctx,
+					   struct vb2_queue *q)
 {
+	/* If start streaming again, untag the last output buffer */
 	if (V4L2_TYPE_IS_OUTPUT(q->type))
 		m2m_ctx->last_src_buf = NULL;
 }
-EXPORT_SYMBOL_GPL(v4l2_m2m_start_streaming);
+EXPORT_SYMBOL_GPL(v4l2_m2m_update_start_streaming_state);
 
-void v4l2_m2m_stop_streaming(struct v4l2_m2m_ctx *m2m_ctx, struct vb2_queue *q)
+/*
+ * Updates the encoding/decoding buffer management state, should
+ * be called from encoder/decoder driver stop_streaming()
+ */
+void v4l2_m2m_update_stop_streaming_state(struct v4l2_m2m_ctx *m2m_ctx,
+					  struct vb2_queue *q)
 {
 	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
+		/*
+		 * If in draining state, either mark next dst buffer as
+		 * done or flag next one to be marked as done either
+		 * in encoder/decoder driver buf_queue() callback using
+		 * the v4l2_m2m_dst_buf_is_last() helper or in v4l2_m2m_qbuf()
+		 * if encoder/decoder is not yet streaming
+		 */
 		if (m2m_ctx->is_draining) {
 			struct vb2_v4l2_buffer *next_dst_buf;
 
@@ -623,7 +664,7 @@ void v4l2_m2m_stop_streaming(struct v4l2_m2m_ctx *m2m_ctx, struct vb2_queue *q)
 		v4l2_m2m_clear_state(m2m_ctx);
 	}
 }
-EXPORT_SYMBOL_GPL(v4l2_m2m_stop_streaming);
+EXPORT_SYMBOL_GPL(v4l2_m2m_update_stop_streaming_state);
 
 static void v4l2_m2m_force_last_buf_done(struct v4l2_m2m_ctx *m2m_ctx,
 					 struct vb2_queue *q)
@@ -1337,6 +1378,10 @@ int v4l2_m2m_ioctl_try_decoder_cmd(struct file *file, void *fh,
 }
 EXPORT_SYMBOL_GPL(v4l2_m2m_ioctl_try_decoder_cmd);
 
+/*
+ * Updates the encoding state on ENC_CMD_STOP/ENC_CMD_START
+ * Should be called from the encoder driver encoder_cmd() callback
+ */
 int v4l2_m2m_encoder_cmd(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 			 struct v4l2_encoder_cmd *ec)
 {
@@ -1344,7 +1389,7 @@ int v4l2_m2m_encoder_cmd(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 		return -EINVAL;
 
 	if (ec->cmd == V4L2_ENC_CMD_STOP)
-		return v4l2_mark_last_buf(m2m_ctx);
+		return v4l2_update_last_buf_state(m2m_ctx);
 
 	if (m2m_ctx->is_draining)
 		return -EBUSY;
@@ -1356,6 +1401,10 @@ int v4l2_m2m_encoder_cmd(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 }
 EXPORT_SYMBOL_GPL(v4l2_m2m_encoder_cmd);
 
+/*
+ * Updates the decoding state on DEC_CMD_STOP/DEC_CMD_START
+ * Should be called from the decoder driver decoder_cmd() callback
+ */
 int v4l2_m2m_decoder_cmd(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 			 struct v4l2_decoder_cmd *dc)
 {
@@ -1363,7 +1412,7 @@ int v4l2_m2m_decoder_cmd(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 		return -EINVAL;
 
 	if (dc->cmd == V4L2_DEC_CMD_STOP)
-		return v4l2_mark_last_buf(m2m_ctx);
+		return v4l2_update_last_buf_state(m2m_ctx);
 
 	if (m2m_ctx->is_draining)
 		return -EBUSY;

@@ -162,10 +162,10 @@ static const struct snd_soc_dai_ops g12a_toacodec_output_ops = {
 }
 
 static struct snd_soc_dai_driver g12a_toacodec_dai_drv[] = {
-	TOACODEC_INPUT("I2S IN A", TOACODEC_IN_A),
-	TOACODEC_INPUT("I2S IN B", TOACODEC_IN_B),
-	TOACODEC_INPUT("I2S IN C", TOACODEC_IN_C),
-	TOACODEC_OUTPUT("I2S OUT", TOACODEC_OUT),
+	TOACODEC_INPUT("IN A", TOACODEC_IN_A),
+	TOACODEC_INPUT("IN B", TOACODEC_IN_B),
+	TOACODEC_INPUT("IN C", TOACODEC_IN_C),
+	TOACODEC_OUTPUT("OUT", TOACODEC_OUT),
 };
 
 static int g12a_toacodec_component_probe(struct snd_soc_component *c)
@@ -176,11 +176,11 @@ static int g12a_toacodec_component_probe(struct snd_soc_component *c)
 }
 
 static const struct snd_soc_dapm_route g12a_toacodec_routes[] = {
-	{ "I2S SRC", "I2S A", "I2S IN A Playback" },
-	{ "I2S SRC", "I2S B", "I2S IN B Playback" },
-	{ "I2S SRC", "I2S C", "I2S IN C Playback" },
-	{ "I2S OUT EN", "Switch", "I2S SRC" },
-	{ "I2S OUT Capture", NULL, "I2S OUT EN" },
+	{ "SRC", "I2S A", "IN A Playback" },
+	{ "SRC", "I2S B", "IN B Playback" },
+	{ "SRC", "I2S C", "IN C Playback" },
+	{ "OUT EN", "Switch", "SRC" },
+	{ "OUT Capture", NULL, "OUT EN" },
 };
 
 static const struct snd_kcontrol_new g12a_toacodec_controls[] = {

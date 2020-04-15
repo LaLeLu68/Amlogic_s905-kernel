@@ -256,11 +256,11 @@
 			dai-tdm-slot-tx-mask-0 = <1 1>;
 			mclk-fs = <256>;
 
-			codec@0 {
+			codec-0 {
 				sound-dai = <&toacodec TOACODEC_IN_B>;
 			};
 
-			codec@1 {
+			codec-1 {
 				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_B>;
 			};
 		};
@@ -271,11 +271,11 @@
 			dai-tdm-slot-tx-mask-0 = <1 1>;
 			mclk-fs = <256>;
 
-			codec@0 {
+			codec-0 {
 				sound-dai = <&toacodec TOACODEC_IN_A>;
 			};
 
-			codec@1 {
+			codec-1 {
 				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_A>;
 			};
 		};
@@ -286,11 +286,11 @@
 			dai-tdm-slot-tx-mask-0 = <1 1>;
 			mclk-fs = <256>;
 
-			codec@0 {
+			codec-0 {
 				sound-dai = <&toacodec TOACODEC_IN_C>;
 			};
 
-			codec@1 {
+			codec-1 {
 				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_C>;
 			};
 		};
@@ -298,11 +298,11 @@
 		dai-link-9 {
 			sound-dai = <&spdifout>;
 
-			codec@0 {
+			codec-0 {
 				sound-dai = <&spdif_dit>;
 			};
 
-			codec@1 {
+			codec-1 {
 				sound-dai = <&tohdmitx TOHDMITX_SPDIF_IN_A>;
 			};
 		};
@@ -310,7 +310,7 @@
 		dai-link-10 {
 			sound-dai = <&spdifout_b>;
 
-			codec {
+			codec-0 {
 				sound-dai = <&tohdmitx TOHDMITX_SPDIF_IN_B>;
 			};
 		};
@@ -318,7 +318,7 @@
 		dai-link-11 {
 			sound-dai = <&tohdmitx TOHDMITX_I2S_OUT>;
 
-			codec {
+			codec-0 {
 				sound-dai = <&hdmi_tx>;
 			};
 		};
@@ -326,7 +326,7 @@
 		dai-link-12 {
 			sound-dai = <&toacodec TOACODEC_OUT>;
 
-			codec {
+			codec-0 {
 				sound-dai = <&acodec>;
 			};
 		};
@@ -479,7 +479,7 @@
 /* eMMC */
 &sd_emmc_c {
 	status = "okay";
-	pinctrl-0 = <&emmc_pins>, <&emmc_ds_pins>;
+	pinctrl-0 = <&emmc_ctrl_pins>, <&emmc_data_8b_pins>, <&emmc_ds_pins>;
 	pinctrl-1 = <&emmc_clk_gate_pins>;
 	pinctrl-names = "default", "clk-gate";
 

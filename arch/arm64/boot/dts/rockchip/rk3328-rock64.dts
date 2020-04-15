@@ -70,14 +70,35 @@
 			linux,default-trigger = "heartbeat";
 		};
 	};
-};
 
-&analog_sound {
-	status = "okay";
+	sound {
+		compatible = "audio-graph-card";
+		label = "rockchip,rk3328";
+		dais = <&i2s1_p0
+			&spdif_p0>;
+	};
+
+	spdif-dit {
+		compatible = "linux,spdif-dit";
+		#sound-dai-cells = <0>;
+
+		port {
+			dit_p0_0: endpoint {
+				remote-endpoint = <&spdif_p0_0>;
+			};
+		};
+	};
 };
 
 &codec {
+	mute-gpios = <&grf_gpio 0 GPIO_ACTIVE_LOW>;
 	status = "okay";
+
+	port@0 {
+		codec_p0_0: endpoint {
+			remote-endpoint = <&i2s1_p0_0>;
+		};
+	};
 };
 
 &cpu0 {
@@ -136,10 +157,6 @@
 };
 
 &hdmiphy {
-	status = "okay";
-};
-
-&hdmi_sound {
 	status = "okay";
 };
 
@@ -254,12 +271,16 @@
 	};
 };
 
-&i2s0 {
-	status = "okay";
-};
-
 &i2s1 {
 	status = "okay";
+
+	i2s1_p0: port {
+		i2s1_p0_0: endpoint {
+			dai-format = "i2s";
+			mclk-fs = <256>;
+			remote-endpoint = <&codec_p0_0>;
+		};
+	};
 };
 
 &io_domains {
@@ -307,14 +328,12 @@
 &spdif {
 	pinctrl-0 = <&spdifm0_tx>;
 	status = "okay";
-};
 
-&spdif_out {
-	status = "okay";
-};
-
-&spdif_sound {
-	status = "okay";
+	spdif_p0: port {
+		spdif_p0_0: endpoint {
+			remote-endpoint = <&dit_p0_0>;
+		};
+	};
 };
 
 &spi0 {

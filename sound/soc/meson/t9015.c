@@ -19,7 +19,6 @@
 #define  LOLP_EN	3
 #define  DACR_EN	4
 #define  DACL_EN	5
-
 #define  DACR_INV	20
 #define  DACL_INV	21
 #define  DACR_SRC	22
@@ -58,7 +57,7 @@ static int t9015_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	struct snd_soc_component *component = dai->component;
 	unsigned int val;
 
-	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBM_CFM:
 		val = I2S_MODE;
 		break;
@@ -75,7 +74,7 @@ static int t9015_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 
 	if (((fmt & SND_SOC_DAIFMT_FORMAT_MASK) != SND_SOC_DAIFMT_I2S) &&
 	    ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) != SND_SOC_DAIFMT_LEFT_J))
-	 	return -EINVAL;
+		return -EINVAL;
 
 	return 0;
 }
@@ -116,23 +115,30 @@ static SOC_ENUM_SINGLE_DECL(mono_enum, VOL_CTRL1, DAC_MONO, mono_txt);
 
 static const struct snd_kcontrol_new t9015_snd_controls[] = {
 	/* Volume Controls */
-	SOC_SINGLE("Playback Mute", VOL_CTRL1, DAC_SOFT_MUTE, 1, 0),
+	SOC_ENUM("Playback Channel Mode", mono_enum),
+	SOC_SINGLE("Playback Switch", VOL_CTRL1, DAC_SOFT_MUTE, 1, 1),
 	SOC_DOUBLE_TLV("Playback Volume", VOL_CTRL1, DACL_VC, DACR_VC,
 		       0xff, 0, dac_vol_tlv),
 
 	/* Ramp Controls */
 	SOC_ENUM("Ramp Rate", ramp_rate_enum),
-	SOC_SINGLE("Volume Ramp Enable", VOL_CTRL1, VC_RAMP_MODE, 1, 0),
-	SOC_SINGLE("Mute Ramp Enable", VOL_CTRL1, MUTE_MODE, 1, 0),
-	SOC_SINGLE("Unmute Ramp Enable", VOL_CTRL1, UNMUTE_MODE, 1, 0),
-
-	/* Channel Src */
-	SOC_ENUM("Right DAC Source", dacr_in_enum),
-	SOC_ENUM("Left DAC Source",  dacl_in_enum),
-	SOC_ENUM("Channel Mode", mono_enum),
+	SOC_SINGLE("Volume Ramp Switch", VOL_CTRL1, VC_RAMP_MODE, 1, 0),
+	SOC_SINGLE("Mute Ramp Switch", VOL_CTRL1, MUTE_MODE, 1, 0),
+	SOC_SINGLE("Unmute Ramp Switch", VOL_CTRL1, UNMUTE_MODE, 1, 0),
 };
 
+static const struct snd_kcontrol_new t9015_right_dac_mux =
+	SOC_DAPM_ENUM("Right DAC Source", dacr_in_enum);
+static const struct snd_kcontrol_new t9015_left_dac_mux =
+	SOC_DAPM_ENUM("Left DAC Source", dacl_in_enum);
+
 static const struct snd_soc_dapm_widget t9015_dapm_widgets[] = {
+	SND_SOC_DAPM_AIF_IN("Right IN", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("Left IN", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_MUX("Right DAC Sel", SND_SOC_NOPM, 0, 0,
+			 &t9015_right_dac_mux),
+	SND_SOC_DAPM_MUX("Left DAC Sel", SND_SOC_NOPM, 0, 0,
+			 &t9015_left_dac_mux),
 	SND_SOC_DAPM_DAC("Right DAC", NULL, BLOCK_EN, DACR_EN, 0),
 	SND_SOC_DAPM_DAC("Left DAC",  NULL, BLOCK_EN, DACL_EN, 0),
 	SND_SOC_DAPM_OUT_DRV("Right- Driver", BLOCK_EN, LORN_EN, 0,
@@ -150,8 +156,14 @@ static const struct snd_soc_dapm_widget t9015_dapm_widgets[] = {
 };
 
 static const struct snd_soc_dapm_route t9015_dapm_routes[] = {
-	{ "Right DAC", NULL, "Playback" },
-	{ "Left DAC",  NULL, "Playback" },
+	{ "Right IN", NULL, "Playback" },
+	{ "Left IN",  NULL, "Playback" },
+	{ "Right DAC Sel", "Right", "Right IN" },
+	{ "Right DAC Sel", "Left",  "Left IN" },
+	{ "Left DAC Sel",  "Right", "Right IN" },
+	{ "Left DAC Sel",  "Left",  "Left IN" },
+	{ "Right DAC", NULL, "Right DAC Sel" },
+	{ "Left DAC",  NULL, "Left DAC Sel" },
 	{ "Right- Driver", NULL, "Right DAC" },
 	{ "Right+ Driver", NULL, "Right DAC" },
 	{ "Left- Driver",  NULL, "Left DAC"  },
@@ -212,23 +224,15 @@ static int t9015_set_bias_level(struct snd_soc_component *component,
 	return 0;
 }
 
-static int t9015_component_probe(struct snd_soc_component *c)
-{
-	/* FIXME */
-	return snd_soc_component_write(c, LINEOUT_CFG, 0x00001111);
-}
-
 static const struct snd_soc_component_driver t9015_codec_driver = {
-	.probe			= t9015_component_probe,
 	.set_bias_level		= t9015_set_bias_level,
-	.controls 		= t9015_snd_controls,
+	.controls		= t9015_snd_controls,
 	.num_controls		= ARRAY_SIZE(t9015_snd_controls),
 	.dapm_widgets		= t9015_dapm_widgets,
 	.num_dapm_widgets	= ARRAY_SIZE(t9015_dapm_widgets),
 	.dapm_routes		= t9015_dapm_routes,
 	.num_dapm_routes	= ARRAY_SIZE(t9015_dapm_routes),
 	.suspend_bias_off	= 1,
-	.idle_bias_on		= 1,
 	.endianness		= 1,
 	.non_legacy_dai_naming	= 1,
 };
@@ -297,7 +301,12 @@ static int t9015_probe(struct platform_device *pdev)
 		return PTR_ERR(regmap);
 	}
 
-	/* Add polarity parsing here */
+	/*
+	 * Initialize output polarity:
+	 * ATM the output polarity is fixed but in the future it might useful
+	 * to add DT property to set this depending on the platform needs
+	 */
+	regmap_write(regmap, LINEOUT_CFG, 0x1111);
 
 	return devm_snd_soc_register_component(dev, &t9015_codec_driver,
 					       &t9015_dai, 1);
@@ -322,5 +331,3 @@ module_platform_driver(t9015_driver);
 MODULE_DESCRIPTION("ASoC Amlogic T9015 codec driver");
 MODULE_AUTHOR("Jerome Brunet <jbrunet@baylibre.com>");
 MODULE_LICENSE("GPL");
-
-

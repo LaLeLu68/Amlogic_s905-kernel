@@ -9,7 +9,6 @@
 
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/sound/meson-aiu.h>
-#include <dt-bindings/thermal/thermal.h>
 
 #include "meson-gxm.dtsi"
 

@@ -9,6 +9,7 @@
 
 #include "dos_regs.h"
 #include "hevc_regs.h"
+#include "codec_vp9.h"
 #include "vdec_helpers.h"
 #include "codec_hevc_common.h"
 
@@ -327,7 +328,11 @@ enum FRAME_TYPE {
 #define D63_PRED   8	/* Directional 63 deg = round(arctan(2/1) * 180/pi) */
 #define TM_PRED    9	/* True-motion */
 
-#define ROUND_POWER_OF_TWO(value, num) (((value) + (1 << ((num) - 1))) >> (num))
+/* Use a static inline to avoid possible side effect from num being reused */
+static inline int round_power_of_two(int value, int num)
+{
+	return (value + (1 << (num - 1))) >> num;
+}
 
 #define MODE_MV_COUNT_SAT 20
 static const int count_to_update_factor[MODE_MV_COUNT_SAT + 1] = {
@@ -700,8 +705,6 @@ static int codec_vp9_alloc_workspace(struct amvdec_core *core,
 		dev_err(core->dev, "Failed to allocate VP9 Workspace\n");
 		return -ENOMEM;
 	}
-
-	memset(vp9->workspace_vaddr, 0, SIZE_WORKSPACE);
 
 	return 0;
 }
@@ -1322,7 +1325,7 @@ static void codec_vp9_resume(struct amvdec_session *sess)
 	mutex_unlock(&vp9->lock);
 }
 
-/**
+/*
  * The RPM section within the workspace contains
  * many information regarding the parsed bitstream
  */
@@ -1433,7 +1436,7 @@ static void vp9_tree_merge_probs(unsigned int *prev_prob,
 
 		/* weighted_prob */
 		factor = count_to_update_factor[m_count];
-		new_prob = ROUND_POWER_OF_TWO(pre_prob * (256 - factor) +
+		new_prob = round_power_of_two(pre_prob * (256 - factor) +
 					      get_prob * factor, 8);
 	}
 
@@ -1488,7 +1491,7 @@ static void adapt_coef_probs_cxt(unsigned int *prev_prob,
 
 			factor = update_factor * m_count / count_sat;
 			new_prob =
-				ROUND_POWER_OF_TWO(pre_prob * (256 - factor) +
+				round_power_of_two(pre_prob * (256 - factor) +
 						   get_prob * factor, 8);
 
 			cur_prob[coef_node_start / 4 * 2] =
@@ -1641,7 +1644,7 @@ static void adapt_coef_probs(int prev_kf, int cur_kf, int pre_fc,
 				/* weighted prob */
 				factor = count_to_update_factor[m_count];
 				new_prob =
-					ROUND_POWER_OF_TWO(pre_prob *
+					round_power_of_two(pre_prob *
 							   (256 - factor) +
 							   get_prob * factor,
 							   8);

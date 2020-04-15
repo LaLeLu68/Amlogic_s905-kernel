@@ -11,6 +11,7 @@
 
 #include "vdec_1.h"
 #include "vdec_helpers.h"
+#include "vdec_hevc.h"
 #include "hevc_regs.h"
 #include "dos_regs.h"
 
@@ -49,7 +50,6 @@ static int vdec_hevc_load_firmware(struct amvdec_session *sess,
 	mc_addr = dma_alloc_coherent(core->dev, MC_SIZE, &mc_addr_map,
 				     GFP_KERNEL);
 	if (!mc_addr) {
-		dev_err(dev, "Failed allocating memory for firmware loading\n");
 		ret = -ENOMEM;
 		goto release_firmware;
 	}
@@ -176,7 +176,7 @@ static int vdec_hevc_start(struct amvdec_session *sess)
 	else
 		regmap_update_bits(core->regmap_ao, AO_RTI_GEN_PWR_SLEEP0,
 				   GEN_PWR_VDEC_HEVC, 0);
-	udelay(10);
+	usleep_range(10, 20);
 
 	/* Reset VDEC_HEVC*/
 	amvdec_write_dos(core, DOS_SW_RESET3, 0xffffffff);
@@ -214,7 +214,7 @@ static int vdec_hevc_start(struct amvdec_session *sess)
 
 	amvdec_write_dos(core, HEVC_MPSR, 1);
 	/* Let the firmware settle */
-	udelay(10);
+	usleep_range(10, 20);
 
 	return 0;
 
