@@ -14,11 +14,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __ASM_BITSPERLONG_H
-#define __ASM_BITSPERLONG_H
+#ifndef __ASM_UCONTEXT_H
+#define __ASM_UCONTEXT_H
 
-#define __BITS_PER_LONG 64
+#include <linux/types.h>
 
-#include <asm-generic/bitsperlong.h>
+struct ucontext {
+	unsigned long	  uc_flags;
+	struct ucontext	 *uc_link;
+	stack_t		  uc_stack;
+	sigset_t	  uc_sigmask;
+	/* glibc uses a 1024-bit sigset_t */
+	__u8		  __unused[1024 / 8 - sizeof(sigset_t)];
+	/* last for future expansion */
+	struct sigcontext uc_mcontext;
+};
 
-#endif	/* __ASM_BITSPERLONG_H */
+#endif /* __ASM_UCONTEXT_H */
