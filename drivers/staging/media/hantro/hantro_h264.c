@@ -239,7 +239,7 @@ static void prepare_table(struct hantro_ctx *ctx)
 	if ((slices[0].flags & V4L2_H264_SLICE_FLAG_FIELD_PIC) || (slices[0].flags & V4L2_H264_SPS_FLAG_MB_ADAPTIVE_FRAME_FIELD)) {
 		for (i = 0; i < HANTRO_H264_DPB_SIZE * 2; ++i) {
 			// check for correct reference use
-			u32 flag = (i & 0x1) ? V4L2_H264_DPB_ENTRY_FLAG_REF_BOTTOM : V4L2_H264_DPB_ENTRY_FLAG_REF_TOP;
+			u32 flag = (i & 0x1) ? V4L2_H264_DPB_ENTRY_FLAG_REF_BOTTOM : V4L2_H264_DPB_ENTRY_FLAG_BOTTOM_FIELD;
 			if (dpb[i / 2].flags & flag)
 				dpb_valid |= BIT(HANTRO_H264_DPB_SIZE * 2 - 1 - i);
 
@@ -340,7 +340,7 @@ init_reflist_builder(struct hantro_ctx *ctx,
 			b->pocs[i] = min(dpb[i].bottom_field_order_cnt, dpb[i].top_field_order_cnt);
 		else if (ref_flag == V4L2_H264_DPB_ENTRY_FLAG_REF_BOTTOM)
 			b->pocs[i] = dpb[i].bottom_field_order_cnt;
-		else if (ref_flag == V4L2_H264_DPB_ENTRY_FLAG_REF_TOP)
+		else if (ref_flag == V4L2_H264_DPB_ENTRY_FLAG_BOTTOM_FIELD)
 			b->pocs[i] = dpb[i].top_field_order_cnt;
 
 		b->unordered_reflist[b->num_valid] = i;
@@ -588,7 +588,7 @@ dma_addr_t hantro_h264_get_ref_buf(struct hantro_ctx *ctx,
 	cur_poc = slices[0].flags & V4L2_H264_SLICE_FLAG_BOTTOM_FIELD ?
 		  dec_param->bottom_field_order_cnt :
 		  dec_param->top_field_order_cnt;
-	flags = dpb[dpb_idx].flags & V4L2_H264_DPB_ENTRY_FLAG_FIELD_PICTURE ? 0x2 : 0;
+	flags = dpb[dpb_idx].flags & V4L2_H264_DPB_ENTRY_FLAG_FIELD ? 0x2 : 0;
 	flags |= abs(dpb[dpb_idx].top_field_order_cnt - cur_poc) <
 		 abs(dpb[dpb_idx].bottom_field_order_cnt - cur_poc) ?
 		 0x1 : 0;

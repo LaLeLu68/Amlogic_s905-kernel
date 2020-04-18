@@ -189,8 +189,7 @@ imx_pd_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 	}
 
 	*num_input_fmts = 1;
-	input_fmts = kcalloc(*num_input_fmts, sizeof(*input_fmts),
-			     GFP_KERNEL);
+	input_fmts = kmalloc(sizeof(*input_fmts), GFP_KERNEL);
 	if (!input_fmts)
 		return NULL;
 
@@ -293,7 +292,7 @@ static int imx_pd_register(struct drm_device *drm,
 			 DRM_MODE_ENCODER_NONE, NULL);
 
 	imxpd->bridge.funcs = &imx_pd_bridge_funcs;
-	drm_bridge_attach(encoder, &imxpd->bridge, NULL);
+	drm_bridge_attach(encoder, &imxpd->bridge, NULL, 0);
 
 	if (!imxpd->next_bridge) {
 		drm_connector_helper_add(&imxpd->connector,
@@ -308,7 +307,7 @@ static int imx_pd_register(struct drm_device *drm,
 
 	if (imxpd->next_bridge) {
 		ret = drm_bridge_attach(encoder, imxpd->next_bridge,
-					&imxpd->bridge);
+					&imxpd->bridge, 0);
 		if (ret < 0) {
 			dev_err(imxpd->dev, "failed to attach bridge: %d\n",
 				ret);

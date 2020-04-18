@@ -1569,7 +1569,7 @@ static int vicodec_start_streaming(struct vb2_queue *q,
 	chroma_div = info->width_div * info->height_div;
 	q_data->sequence = 0;
 
-	v4l2_m2m_start_streaming(ctx->fh.m2m_ctx, q);
+	v4l2_m2m_update_start_streaming_state(ctx->fh.m2m_ctx, q);
 
 	state->gop_cnt = 0;
 
@@ -1648,7 +1648,7 @@ static void vicodec_stop_streaming(struct vb2_queue *q)
 
 	vicodec_return_bufs(q, VB2_BUF_STATE_ERROR);
 
-	v4l2_m2m_stop_streaming(ctx->fh.m2m_ctx, q);
+	v4l2_m2m_update_stop_streaming_state(ctx->fh.m2m_ctx, q);
 
 	if (V4L2_TYPE_IS_OUTPUT(q->type) &&
 	    v4l2_m2m_has_stopped(ctx->fh.m2m_ctx))
@@ -2062,7 +2062,7 @@ static int register_instance(struct vicodec_dev *dev,
 	}
 	video_set_drvdata(vfd, dev);
 
-	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
+	ret = video_register_device(vfd, VFL_TYPE_VIDEO, 0);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to register video device '%s'\n", name);
 		v4l2_m2m_release(dev_instance->m2m_dev);

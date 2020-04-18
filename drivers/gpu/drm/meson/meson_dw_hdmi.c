@@ -715,26 +715,6 @@ static const struct drm_encoder_funcs meson_venc_hdmi_encoder_funcs = {
 };
 
 static u32 *
-meson_venc_hdmi_encoder_get_out_bus_fmts(struct drm_bridge *bridge,
-					 struct drm_bridge_state *bridge_state,
-					 struct drm_crtc_state *crtc_state,
-					 struct drm_connector_state *conn_state,
-					 unsigned int *num_output_fmts)
-{
-	u32 *output_fmts;
-
-	*num_output_fmts = ARRAY_SIZE(meson_dw_hdmi_out_bus_fmts);
-	output_fmts = kcalloc(*num_output_fmts, sizeof(*output_fmts),
-			      GFP_KERNEL);
-	if (!output_fmts)
-		return NULL;
-
-	memcpy(output_fmts, meson_dw_hdmi_out_bus_fmts, *num_output_fmts);
-
-	return output_fmts;
-}
-
-static u32 *
 meson_venc_hdmi_encoder_get_inp_bus_fmts(struct drm_bridge *bridge,
 					struct drm_bridge_state *bridge_state,
 					struct drm_crtc_state *crtc_state,
@@ -841,7 +821,6 @@ static void meson_venc_hdmi_encoder_mode_set(struct drm_bridge *bridge,
 static const struct drm_bridge_funcs meson_venc_hdmi_encoder_bridge_funcs = {
 	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
 	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
-	.atomic_get_output_bus_fmts = meson_venc_hdmi_encoder_get_out_bus_fmts,
 	.atomic_get_input_bus_fmts = meson_venc_hdmi_encoder_get_inp_bus_fmts,
 	.atomic_reset = drm_atomic_helper_bridge_reset,
 	.atomic_check = meson_venc_hdmi_encoder_atomic_check,
@@ -1078,7 +1057,7 @@ static int meson_dw_hdmi_bind(struct device *dev, struct device *master,
 	}
 
 	meson_dw_hdmi->bridge.funcs = &meson_venc_hdmi_encoder_bridge_funcs;
-	drm_bridge_attach(encoder, &meson_dw_hdmi->bridge, NULL);
+	drm_bridge_attach(encoder, &meson_dw_hdmi->bridge, NULL, 0);
 
 	encoder->possible_crtcs = BIT(0);
 
@@ -1109,7 +1088,8 @@ static int meson_dw_hdmi_bind(struct device *dev, struct device *master,
 
 	next_bridge = of_drm_find_bridge(pdev->dev.of_node);
 	if (next_bridge)
-		drm_bridge_attach(encoder, next_bridge, &meson_dw_hdmi->bridge);
+		drm_bridge_attach(encoder, next_bridge,
+				  &meson_dw_hdmi->bridge, 0);
 
 	DRM_DEBUG_DRIVER("HDMI controller initialized\n");
 

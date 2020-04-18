@@ -9,6 +9,7 @@
 
 #include "vdec_helpers.h"
 #include "dos_regs.h"
+#include "codec_h264.h"
 
 #define SIZE_EXT_FW	(20 * SZ_1K)
 #define SIZE_WORKSPACE	0x1ee000
@@ -210,7 +211,7 @@ static int codec_h264_stop(struct amvdec_session *sess)
 
 	if (h264->workspace_vaddr)
 		dma_free_coherent(core->dev, SIZE_WORKSPACE,
-				 h264->workspace_vaddr, h264->workspace_paddr);
+				  h264->workspace_vaddr, h264->workspace_paddr);
 
 	if (h264->ref_vaddr)
 		dma_free_coherent(core->dev, h264->ref_size,
@@ -237,7 +238,8 @@ static int codec_h264_load_extended_firmware(struct amvdec_session *sess,
 		return -ENOMEM;
 
 	h264->ext_fw_vaddr = dma_alloc_coherent(core->dev, SIZE_EXT_FW,
-					      &h264->ext_fw_paddr, GFP_KERNEL);
+						&h264->ext_fw_paddr,
+						GFP_KERNEL);
 	if (!h264->ext_fw_vaddr) {
 		kfree(h264);
 		return -ENOMEM;
@@ -286,8 +288,9 @@ static void codec_h264_resume(struct amvdec_session *sess)
 	struct codec_h264 *h264 = sess->priv;
 	u32 mb_width, mb_height, mb_total;
 
-	amvdec_set_canvases(sess, (u32[]){ ANC0_CANVAS_ADDR, 0 },
-				  (u32[]){ 24, 0 });
+	amvdec_set_canvases(sess,
+			    (u32[]){ ANC0_CANVAS_ADDR, 0 },
+			    (u32[]){ 24, 0 });
 
 	dev_dbg(core->dev, "max_refs = %u; actual_dpb_size = %u\n",
 		h264->max_refs, sess->num_dst_bufs);
@@ -315,7 +318,7 @@ static void codec_h264_resume(struct amvdec_session *sess)
 					     ((h264->max_refs - 1) << 8));
 }
 
-/**
+/*
  * Configure the H.264 decoder when the parser detected a parameter set change
  */
 static void codec_h264_src_change(struct amvdec_session *sess)
@@ -353,7 +356,7 @@ static void codec_h264_src_change(struct amvdec_session *sess)
 	amvdec_src_change(sess, frame_width, frame_height, h264->max_refs + 5);
 }
 
-/**
+/*
  * The bitstream offset is split in half in 2 different registers.
  * Fetch its MSB here, which location depends on the frame number.
  */

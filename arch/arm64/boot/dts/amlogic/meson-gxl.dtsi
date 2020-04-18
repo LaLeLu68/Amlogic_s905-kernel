@@ -63,8 +63,8 @@
 &aiu {
 	compatible = "amlogic,aiu-gxl", "amlogic,aiu";
 	clocks = <&clkc CLKID_AIU_GLUE>,
-	       	 <&clkc CLKID_I2S_OUT>,
-	       	 <&clkc CLKID_AOCLK_GATE>,
+		 <&clkc CLKID_I2S_OUT>,
+		 <&clkc CLKID_AOCLK_GATE>,
 		 <&clkc CLKID_CTS_AMCLK>,
 		 <&clkc CLKID_MIXER_IFACE>,
 		 <&clkc CLKID_IEC958>,

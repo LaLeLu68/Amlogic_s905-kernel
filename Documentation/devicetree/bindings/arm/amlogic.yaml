@@ -137,7 +137,6 @@ properties:
               - amediatech,x96-max
               - amlogic,u200
               - seirobotics,sei510
-              - oranth,tx5-max
           - const: amlogic,g12a
 
       - description: Boards with the Amlogic Meson G12B A311D SoC
@@ -150,8 +149,6 @@ properties:
       - description: Boards with the Amlogic Meson G12B S922X SoC
         items:
           - enum:
-              - azw,gtking
-              - azw,gtking-pro
               - hardkernel,odroid-n2
               - khadas,vim3
               - ugoos,am6

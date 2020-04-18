@@ -117,65 +117,6 @@
 		};
 	};
 
-	cpu0_opp_table: opp_table0 {
-		compatible = "operating-points-v2";
-		opp-shared;
-
-		opp-480000000 {
-			opp-hz = /bits/ 64 <480000000>;
-			opp-microvolt = <1040000 1040000 1300000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-648000000 {
-			opp-hz = /bits/ 64 <648000000>;
-			opp-microvolt = <1040000 1040000 1300000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-816000000 {
-			opp-hz = /bits/ 64 <816000000>;
-			opp-microvolt = <1100000 1100000 1300000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-960000000 {
-			opp-hz = /bits/ 64 <960000000>;
-			opp-microvolt = <1200000 1200000 1300000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-1008000000 {
-			opp-hz = /bits/ 64 <1008000000>;
-			opp-microvolt = <1200000 1200000 1300000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-1104000000 {
-			opp-hz = /bits/ 64 <1104000000>;
-			opp-microvolt = <1320000 1320000 1320000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-1200000000 {
-			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <1320000 1320000 1320000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-1296000000 {
-			opp-hz = /bits/ 64 <1296000000>;
-			opp-microvolt = <1340000 1340000 1340000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-
-		opp-1368000000 {
-			opp-hz = /bits/ 64 <1368000000>;
-			opp-microvolt = <1400000 1400000 1400000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-		};
-	};
-
 	de: display-engine {
 		compatible = "allwinner,sun8i-h3-display-engine";
 		allwinner,pipelines = <&mixer0>;
@@ -191,7 +132,7 @@
 
 		display_clocks: clock@1000000 {
 			/* compatible is in per SoC .dtsi file */
-			reg = <0x01000000 0x100000>;
+			reg = <0x01000000 0x10000>;
 			clocks = <&ccu CLK_BUS_DE>,
 				 <&ccu CLK_DE>;
 			clock-names = "bus",
@@ -276,7 +217,6 @@
 			resets = <&ccu RST_BUS_MMC0>;
 			reset-names = "ahb";
 			interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
-			bus-width = <0x4>;
 			status = "disabled";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -502,16 +442,6 @@
 				function = "i2c2";
 			};
 
-			i2s0_pins: i2s0-pins {
-				pins = "PA18", "PA19", "PA20", "PA21";
-				function = "i2s0";
-			};
-
-			i2s1_pins: i2s1-pins {
-				pins = "PG10", "PG11", "PG12", "PG13";
-				function = "i2s1";
-			};
-
 			mmc0_pins: mmc0-pins {
 				pins = "PF0", "PF1", "PF2", "PF3",
 				       "PF4", "PF5";
@@ -648,6 +578,8 @@
 			compatible = "allwinner,sun8i-h3-mbus";
 			reg = <0x01c62000 0x1000>;
 			clocks = <&ccu CLK_MBUS>;
+			#address-cells = <1>;
+			#size-cells = <1>;
 			dma-ranges = <0x00000000 0x40000000 0xc0000000>;
 			#interconnect-cells = <1>;
 		};
@@ -994,6 +926,21 @@
 				pins = "PL0", "PL1";
 				function = "s_i2c";
 			};
+
+			r_pwm_pin: r-pwm-pin {
+				pins = "PL10";
+				function = "s_pwm";
+			};
+		};
+
+		r_pwm: pwm@1f03800 {
+			compatible = "allwinner,sun8i-h3-pwm";
+			reg = <0x01f03800 0x8>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&r_pwm_pin>;
+			clocks = <&osc24M>;
+			#pwm-cells = <3>;
+			status = "disabled";
 		};
 	};
 };

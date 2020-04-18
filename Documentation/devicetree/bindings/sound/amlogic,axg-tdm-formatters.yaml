@@ -13,20 +13,13 @@ properties:
   $nodename:
     pattern: "^audio-controller@.*"
 
-  "#sound-dai-cells":
-    const: 0
-
   compatible:
     oneOf:
       - items:
         - enum:
           - amlogic,g12a-tdmout
           - amlogic,sm1-tdmout
-        - const:
-            amlogic,axg-tdmout
-      - items:
-        - const:
-            amlogic,axg-tdmout
+          - amlogic,axg-tdmout
       - items:
         - enum:
           - amlogic,g12a-tdmin
@@ -60,7 +53,6 @@ properties:
     maxItems: 1
 
 required:
-  - "#sound-dai-cells"
   - compatible
   - reg
   - clocks
@@ -87,7 +79,6 @@ examples:
     tdmout_a: audio-controller@500 {
         compatible = "amlogic,g12a-tdmout",
                      "amlogic,axg-tdmout";
-         #sound-dai-cells = <0>;
         reg = <0x0 0x500 0x0 0x40>;
         resets = <&clkc_audio AUD_RESET_TDMOUT_A>;
         clocks = <&clkc_audio AUD_CLKID_TDMOUT_A>,

@@ -126,7 +126,7 @@
 };
 
 &frddr_a {
-        status = "okay";
+	status = "okay";
 };
 
 &frddr_b {
@@ -171,13 +171,13 @@
  */
 
 &tdmif_b {
-        status = "okay";
+	status = "okay";
 };
 
 &tdmout_b {
-        status = "okay";
+	status = "okay";
 };
 
 &tohdmitx {
-        status = "okay";
+	status = "okay";
 };

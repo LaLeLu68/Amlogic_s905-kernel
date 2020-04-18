@@ -224,6 +224,11 @@ v4l2_m2m_buf_done(struct vb2_v4l2_buffer *buf, enum vb2_buffer_state state)
 	vb2_buffer_done(&buf->vb2_buf, state);
 }
 
+/**
+ * v4l2_m2m_clear_state() - clear encoding/decoding state
+ *
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ */
 static inline void
 v4l2_m2m_clear_state(struct v4l2_m2m_ctx *m2m_ctx)
 {
@@ -232,6 +237,11 @@ v4l2_m2m_clear_state(struct v4l2_m2m_ctx *m2m_ctx)
 	m2m_ctx->has_stopped = false;
 }
 
+/**
+ * v4l2_m2m_mark_stopped() - set current encoding/decoding state as stopped
+ *
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ */
 static inline void
 v4l2_m2m_mark_stopped(struct v4l2_m2m_ctx *m2m_ctx)
 {
@@ -240,23 +250,49 @@ v4l2_m2m_mark_stopped(struct v4l2_m2m_ctx *m2m_ctx)
 	m2m_ctx->has_stopped = true;
 }
 
+/**
+ * v4l2_m2m_dst_buf_is_last() - return the current encoding/decoding session
+ * draining management state of next queued capture buffer
+ *
+ * This last capture buffer should be tagged with V4L2_BUF_FLAG_LAST to notify
+ * the end of the capture session.
+ *
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ */
 static inline bool
 v4l2_m2m_dst_buf_is_last(struct v4l2_m2m_ctx *m2m_ctx)
 {
 	return m2m_ctx->is_draining && m2m_ctx->next_buf_last;
 }
 
+/**
+ * v4l2_m2m_has_stopped() - return the current encoding/decoding session
+ * stopped state
+ *
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ */
 static inline bool
 v4l2_m2m_has_stopped(struct v4l2_m2m_ctx *m2m_ctx)
 {
 	return m2m_ctx->has_stopped;
 }
 
+/**
+ * v4l2_m2m_is_last_draining_src_buf() - return the output buffer draining
+ * state in the current encoding/decoding session
+ *
+ * This will identify the last output buffer queued before a session stop
+ * was required, leading to an actual encoding/decoding session stop state
+ * in the encoding/decoding process after being processed.
+ *
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ * @vbuf: pointer to struct &v4l2_buffer
+ */
 static inline bool
 v4l2_m2m_is_last_draining_src_buf(struct v4l2_m2m_ctx *m2m_ctx,
-				       struct vb2_v4l2_buffer *buf)
+				  struct vb2_v4l2_buffer *vbuf)
 {
-	return m2m_ctx->is_draining && buf == m2m_ctx->last_src_buf;
+	return m2m_ctx->is_draining && vbuf == m2m_ctx->last_src_buf;
 }
 
 /**
@@ -366,22 +402,24 @@ int v4l2_m2m_streamoff(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 		       enum v4l2_buf_type type);
 
 /**
- * v4l2_m2m_start_streaming() - handle start of streaming of a video queue
+ * v4l2_m2m_update_start_streaming_state() - update the encoding/decoding
+ * session state when a start of streaming of a video queue is requested
  *
  * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
  * @q: queue
  */
-void v4l2_m2m_start_streaming(struct v4l2_m2m_ctx *m2m_ctx,
-			      struct vb2_queue *q);
+void v4l2_m2m_update_start_streaming_state(struct v4l2_m2m_ctx *m2m_ctx,
+					   struct vb2_queue *q);
 
 /**
- * v4l2_m2m_stop_streaming() - handle stop of streaming of a video queue
+ * v4l2_m2m_update_stop_streaming_state() -  update the encoding/decoding
+ * session state when a stop of streaming of a video queue is requested
  *
  * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
  * @q: queue
  */
-void v4l2_m2m_stop_streaming(struct v4l2_m2m_ctx *m2m_ctx,
-			     struct vb2_queue *q);
+void v4l2_m2m_update_stop_streaming_state(struct v4l2_m2m_ctx *m2m_ctx,
+					  struct vb2_queue *q);
 
 /**
  * v4l2_m2m_encoder_cmd() - execute an encoder command

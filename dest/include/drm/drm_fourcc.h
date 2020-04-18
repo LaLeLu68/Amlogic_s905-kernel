@@ -814,39 +814,48 @@ extern "C" {
  *
  * It considerably reduces memory bandwidth while writing and reading
  * frames in memory.
- * Implementation details may be platform and SoC specific, and shared
- * between the producer and the decoder on the same platform.
  *
  * The underlying storage is considered to be 3 components, 8bit or 10-bit
  * per component YCbCr 420, single plane :
  * - DRM_FORMAT_YUV420_8BIT
  * - DRM_FORMAT_YUV420_10BIT
  *
- * The classic memory storage is composed of:
+ * The first 8 bits of the mode defines the layout, then the following 8 bits
+ * defined the options changing the layout.
+ *
+ * Not all combinations are valid, and different SoCs may support different
+ * combinations of layout and options.
+ */
+#define DRM_FORMAT_MOD_AMLOGIC_FBC(__modes) fourcc_mod_code(AMLOGIC, __modes)
+
+/*
+ * Amlogic FBC Basic Layout
+ *
+ * The basic layout is composed of:
  * - a body content organized in 64x32 superblocks with 4096 bytes per
  *   superblock in default mode.
  * - a 32 bytes per 128x64 header block
- */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_DEFAULT fourcc_mod_code(AMLOGIC, 0)
-
-/*
- * Amlogic Video Framebuffer Compression Options
  *
- * Two optional features are available which may not supported/used on every
- * SoCs and Compressed Framebuffer producers.
+ * This layout is transferrable between Amlogic SoCs supporting this modifier.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC(__modes) fourcc_mod_code(AMLOGIC, __modes)
+#define DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_BASIC		(1ULL << 0)
 
 /*
  * Amlogic FBC Scatter Memory layout
  *
  * Indicates the header contains IOMMU references to the compressed
  * frames content to optimize memory access and layout.
+ *
  * In this mode, only the header memory address is needed, thus the
  * content memory organization is tied to the current producer
- * execution and cannot be saved/dumped.
+ * execution and cannot be saved/dumped neither transferrable between
+ * Amlogic SoCs supporting this modifier.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_SCATTER	(1ULL << 0)
+#define DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_SCATTER	(2ULL << 0)
+
+/*
+ * Amlogic FBC Layout Options
+ */
 
 /*
  * Amlogic FBC Memory Saving mode
@@ -855,10 +864,11 @@ extern "C" {
  * boudaries, i.e. 8bit should be stored in this mode to save allocation
  * memory.
  *
- * This mode reduces body layout to 3072 bytes per 64x32 superblock and
- * 3200 bytes per 64x32 superblock combined with scatter mode.
+ * This mode reduces body layout to 3072 bytes per 64x32 superblock with
+ * the basic layout and 3200 bytes per 64x32 superblock combined with
+ * the scatter layout.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING	(1ULL << 1)
+#define DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING	(1ULL << 8)
 
 #if defined(__cplusplus)
 }
