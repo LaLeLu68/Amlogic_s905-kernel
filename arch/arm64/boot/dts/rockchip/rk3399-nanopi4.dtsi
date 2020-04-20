@@ -160,7 +160,7 @@
 			"Headphone Jack", "HPOR";
 
 		simple-audio-card,cpu {
-			sound-dai = <&i2s1>;
+			sound-dai = <&i2s0>;
 		};
 		simple-audio-card,codec {
 			sound-dai = <&rt5651>;
@@ -568,22 +568,18 @@
 	status = "okay";
 };
 
-/*
+
 &i2s0 {
+	status = "okay";
+	rockchip,i2s-broken-burst-len;
 	rockchip,playback-channels = <8>;
 	rockchip,capture-channels = <8>;
-	status = "okay";
-};*/
+	#sound-dai-cells = <0>;
+};
 
 &i2s1 {
 	assigned-clocks = <&cru SCLK_I2SOUT_SRC>;
 	assigned-clock-parents = <&cru SCLK_I2S1_8CH>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2s_8ch_mclk>,<&i2s1_2ch_bus>;
-	rockchip,playback-channels = <2>;
-	rockchip,capture-channels = <2>;
-	#sound-dai-cells = <0>;
-	status = "okay";
 };
 
 &i2s2 {
@@ -599,6 +595,11 @@
 	status = "okay";
 };
 
+&pmu_io_domains {
+	status = "okay";
+	pmu1830-supply = <&vcc_3v0>;
+};
+
 &pcie_phy {
 	assigned-clock-parents = <&cru SCLK_PCIEPHY_REF100M>;
 	assigned-clock-rates = <100000000>;
@@ -609,7 +610,7 @@
 &pcie0 {
 	ep-gpios = <&gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;
 	max-link-speed = <2>;
-	num-lanes = <2>;
+	num-lanes = <4>;
 	vpcie0v9-supply = <&vcca0v9_s3>;
 	vpcie1v8-supply = <&vcca1v8_s3>;
 	status = "okay";
@@ -638,15 +639,27 @@
 		};
 	};
 
-	i2s1 {
-		i2s_8ch_mclk: i2s-8ch-mclk {
-			rockchip,pins = <4 RK_PA0 RK_FUNC_1 &pcfg_pull_none>;
+	i2s0 {
+		i2s0_8ch_bus: i2s0-8ch-bus {
+			rockchip,pins =
+				<3 24 RK_FUNC_1 &pcfg_pull_none>,
+				<3 25 RK_FUNC_1 &pcfg_pull_none>,
+				<3 26 RK_FUNC_1 &pcfg_pull_none>,
+				<3 27 RK_FUNC_1 &pcfg_pull_none>,
+				<3 28 RK_FUNC_1 &pcfg_pull_none>,
+				<3 29 RK_FUNC_1 &pcfg_pull_none>,
+				<3 30 RK_FUNC_1 &pcfg_pull_none>,
+				<3 31 RK_FUNC_1 &pcfg_pull_none>;
 		};
+
+		i2s_8ch_mclk: i2s-8ch-mclk {
+			rockchip,pins = <4 0 RK_FUNC_1 &pcfg_pull_none>;
+		};	
 	};
 
 	headphone {
 		hp_det: hp-det {
-			rockchip,pins = <4 28 RK_FUNC_GPIO &pcfg_pull_up>;
+			rockchip,pins = <4 28 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
