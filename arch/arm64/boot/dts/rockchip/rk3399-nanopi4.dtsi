@@ -139,17 +139,12 @@
 		reset-gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
 	};
 
-	rt5651_card: rt5651-sound {
-		status = "okay";
+	rt5651-sound {
 		compatible = "simple-audio-card";
-		pinctrl-names = "default";
-		pinctrl-0 = <&hp_det>;
-
 		simple-audio-card,name = "realtek,rt5651-codec";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,mclk-fs = <256>;
 		simple-audio-card,hp-det-gpio = <&gpio4 28 GPIO_ACTIVE_HIGH>;
-
 		simple-audio-card,widgets =
 			"Microphone", "Mic Jack",
 			"Headphone", "Headphone Jack";
@@ -158,7 +153,6 @@
 			"IN1P", "Mic Jack",
 			"Headphone Jack", "HPOL",
 			"Headphone Jack", "HPOR";
-
 		simple-audio-card,cpu {
 			sound-dai = <&i2s0>;
 		};
@@ -528,10 +522,9 @@
 };
 
 &i2c1 {
+	i2c-scl-rising-time-ns = <150>;
+	i2c-scl-falling-time-ns = <30>;
 	status = "okay";
-	i2c-scl-rising-time-ns = <300>;
-	i2c-scl-falling-time-ns = <15>;
-	clock-frequency = <200000>;
 
 	rt5651: rt5651@1a {
 		#sound-dai-cells = <0>;
@@ -539,7 +532,8 @@
 		reg = <0x1a>;
 		clocks = <&cru SCLK_I2S_8CH_OUT>;
 		clock-names = "mclk";
-		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2s_8ch_mclk>;
 	};
 };
 
@@ -568,13 +562,14 @@
 	status = "okay";
 };
 
-
-&i2s0 {
-	status = "okay";
+&i2s0{
+	assigned-clocks = <&cru SCLK_I2SOUT_SRC>;
+//	assigned-clock-parents = <&cru SCLK_I2S0_8CH>;
 	rockchip,i2s-broken-burst-len;
-	rockchip,playback-channels = <8>;
-	rockchip,capture-channels = <8>;
+	rockchip,playback-channels = <2>;
+	rockchip,capture-channels = <2>;
 	#sound-dai-cells = <0>;
+	status = "okay";
 };
 
 &i2s1 {
@@ -640,20 +635,29 @@
 	};
 
 	i2s0 {
+		i2s0_2ch_bus: i2s0-2ch-bus {
+			rockchip,pins =
+				<3 RK_PD0 1 &pcfg_pull_none>,
+				<3 RK_PD1 1 &pcfg_pull_none>,
+				<3 RK_PD2 1 &pcfg_pull_none>,
+				<3 RK_PD3 1 &pcfg_pull_none>,
+				<3 RK_PD7 1 &pcfg_pull_none>;
+		};
+
 		i2s0_8ch_bus: i2s0-8ch-bus {
 			rockchip,pins =
-				<3 24 RK_FUNC_1 &pcfg_pull_none>,
-				<3 25 RK_FUNC_1 &pcfg_pull_none>,
-				<3 26 RK_FUNC_1 &pcfg_pull_none>,
-				<3 27 RK_FUNC_1 &pcfg_pull_none>,
-				<3 28 RK_FUNC_1 &pcfg_pull_none>,
-				<3 29 RK_FUNC_1 &pcfg_pull_none>,
-				<3 30 RK_FUNC_1 &pcfg_pull_none>,
-				<3 31 RK_FUNC_1 &pcfg_pull_none>;
+				<3 RK_PD0 1 &pcfg_pull_none>,
+				<3 RK_PD1 1 &pcfg_pull_none>,
+				<3 RK_PD2 1 &pcfg_pull_none>,
+				<3 RK_PD3 1 &pcfg_pull_none>,
+				<3 RK_PD4 1 &pcfg_pull_none>,
+				<3 RK_PD5 1 &pcfg_pull_none>,
+				<3 RK_PD6 1 &pcfg_pull_none>,
+				<3 RK_PD7 1 &pcfg_pull_none>;
 		};
 
 		i2s_8ch_mclk: i2s-8ch-mclk {
-			rockchip,pins = <4 0 RK_FUNC_1 &pcfg_pull_none>;
+			rockchip,pins = <4 RK_PA0 RK_FUNC_1 &pcfg_pull_none>;
 		};	
 	};
 
