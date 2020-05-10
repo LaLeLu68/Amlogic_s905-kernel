@@ -528,7 +528,7 @@
 
 	rt5651: rt5651@1a {
 		#sound-dai-cells = <0>;
-		compatible = "rockchip,rt5651";
+		compatible = "realtek,rt5651";
 		reg = <0x1a>;
 		clocks = <&cru SCLK_I2S_8CH_OUT>;
 		clock-names = "mclk";
