@@ -854,36 +854,6 @@ static int codec_vp9_stop(struct amvdec_session *sess)
 	return 0;
 }
 
-/*
- * Program LAST & GOLDEN frames into the motion compensation reference cache
- * controller
- */
-static void codec_vp9_set_mcrcc(struct amvdec_session *sess)
-{
-	struct amvdec_core *core = sess->core;
-	struct codec_vp9 *vp9 = sess->priv;
-	u32 val;
-
-	/* Reset mcrcc */
-	amvdec_write_dos(core, HEVCD_MCRCC_CTL1, 0x2);
-	/* Disable on I-frame */
-	if (vp9->cur_frame->type == KEY_FRAME || vp9->cur_frame->intra_only) {
-		amvdec_write_dos(core, HEVCD_MCRCC_CTL1, 0x0);
-		return;
-	}
-
-	amvdec_write_dos(core, HEVCD_MPP_ANC_CANVAS_ACCCONFIG_ADDR, BIT(1));
-	val = amvdec_read_dos(core, HEVCD_MPP_ANC_CANVAS_DATA_ADDR) & 0xffff;
-	val |= (val << 16);
-	amvdec_write_dos(core, HEVCD_MCRCC_CTL2, val);
-	val = amvdec_read_dos(core, HEVCD_MPP_ANC_CANVAS_DATA_ADDR) & 0xffff;
-	val |= (val << 16);
-	amvdec_write_dos(core, HEVCD_MCRCC_CTL3, val);
-
-	/* Enable mcrcc progressive-mode */
-	amvdec_write_dos(core, HEVCD_MCRCC_CTL1, 0xff0);
-}
-
 static void codec_vp9_set_sao(struct amvdec_session *sess,
 			      struct vb2_buffer *vb)
 {
@@ -1185,29 +1155,6 @@ static void codec_vp9_set_mc(struct amvdec_session *sess,
 	amvdec_write_dos(core, VP9D_MPP_REF_SCALE_ENBL, scale);
 }
 
-/*
- * Get a free VB2 buffer that isn't currently used.
- * VP9 references are held sometimes for so long that it's not really an option
- * to hold them until they're no longer referenced, as it would delay the
- * CAPTURE queue too much
- */
-static struct vb2_v4l2_buffer *get_free_vbuf(struct amvdec_session *sess)
-{
-	struct codec_vp9 *vp9 = sess->priv;
-	struct vb2_v4l2_buffer *vbuf = v4l2_m2m_dst_buf_remove(sess->m2m_ctx);
-	struct vb2_v4l2_buffer *vbuf2;
-
-	if (!vbuf)
-		return NULL;
-
-	if (!codec_vp9_get_frame_by_idx(vp9, vbuf->vb2_buf.index))
-		return vbuf;
-
-	vbuf2 = get_free_vbuf(sess);
-	v4l2_m2m_buf_queue(sess->m2m_ctx, vbuf);
-	return vbuf2;
-}
-
 static struct vp9_frame *codec_vp9_get_new_frame(struct amvdec_session *sess)
 {
 	struct codec_vp9 *vp9 = sess->priv;
@@ -1219,11 +1166,23 @@ static struct vp9_frame *codec_vp9_get_new_frame(struct amvdec_session *sess)
 	if (!new_frame)
 		return NULL;
 
-	vbuf = get_free_vbuf(sess);
+	vbuf = v4l2_m2m_dst_buf_remove(sess->m2m_ctx);
 	if (!vbuf) {
 		dev_err(sess->core->dev, "No dst buffer available\n");
 		kfree(new_frame);
 		return NULL;
+	}
+
+	while (codec_vp9_get_frame_by_idx(vp9, vbuf->vb2_buf.index)) {
+		struct vb2_v4l2_buffer *old_vbuf = vbuf;
+
+		vbuf = v4l2_m2m_dst_buf_remove(sess->m2m_ctx);
+		v4l2_m2m_buf_queue(sess->m2m_ctx, old_vbuf);
+		if (!vbuf) {
+			dev_err(sess->core->dev, "No dst buffer available\n");
+			kfree(new_frame);
+			return NULL;
+		}
 	}
 
 	new_frame->vbuf = vbuf;
@@ -1278,10 +1237,8 @@ static void codec_vp9_process_frame(struct amvdec_session *sess)
 		codec_vp9_rm_noshow_frame(sess);
 
 	vp9->cur_frame = codec_vp9_get_new_frame(sess);
-	if (!vp9->cur_frame) {
-		amvdec_abort(sess);
+	if (!vp9->cur_frame)
 		return;
-	}
 
 	pr_debug("frame %d: type: %08X; show_exist: %u; show: %u, intra_only: %u\n",
 		 vp9->cur_frame->index,
@@ -1310,7 +1267,6 @@ static void codec_vp9_process_frame(struct amvdec_session *sess)
 
 	amvdec_write_dos(core, HEVC_PARSER_PICTURE_SIZE,
 			 (vp9->height << 16) | vp9->width);
-	codec_vp9_set_mcrcc(sess);
 	codec_vp9_set_sao(sess, &vp9->cur_frame->vbuf->vb2_buf);
 
 	vp9_loop_filter_frame_init(core, &vp9->seg_4lf,

@@ -261,10 +261,6 @@ struct v4l2_vp9_probabilities {
  *			&v4l2_ctrl_vp9_frame_decode_params->reset_frame_context
  *
  * @V4L2_VP9_RESET_FRAME_CTX_NONE: don't reset any frame context
- * @V4L2_VP9_RESET_FRAME_CTX_NONE_ALT: don't reset any frame context. This is an
- *				       alternate value for
- *				       V4L2_VP9_RESET_FRAME_CTX_NONE but has
- *				       the same meaning
  * @V4L2_VP9_RESET_FRAME_CTX_SPEC: reset the frame context pointed by
  *			&v4l2_ctrl_vp9_frame_decode_params.frame_context_idx
  * @V4L2_VP9_RESET_FRAME_CTX_ALL: reset all frame contexts
@@ -274,7 +270,6 @@ struct v4l2_vp9_probabilities {
  */
 enum v4l2_vp9_reset_frame_context {
 	V4L2_VP9_RESET_FRAME_CTX_NONE,
-	V4L2_VP9_RESET_FRAME_CTX_NONE_ALT,
 	V4L2_VP9_RESET_FRAME_CTX_SPEC,
 	V4L2_VP9_RESET_FRAME_CTX_ALL,
 };
