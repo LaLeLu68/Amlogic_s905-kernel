@@ -6,12 +6,9 @@
  * Author(s): Neil Armstrong <narmstrong@baylibre.com>
  */
 
-#include <linux/hwmon.h>
-#include <linux/hwmon-sysfs.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/regulator/consumer.h>
 #include <linux/mfd/khadas-mcu.h>
 #include <linux/regmap.h>
 #include <linux/sysfs.h>
@@ -40,48 +37,6 @@ static int khadas_mcu_fan_set_level(struct khadas_mcu_fan_ctx *ctx,
 	return 0;
 }
 
-static ssize_t level_store(struct device *dev, struct device_attribute *attr,
-			   const char *buf, size_t count)
-{
-	struct khadas_mcu_fan_ctx *ctx = dev_get_drvdata(dev);
-	unsigned long level;
-	int ret;
-
-	if (kstrtoul(buf, 10, &level) || level > MAX_LEVEL)
-		return -EINVAL;
-
-	ret = khadas_mcu_fan_set_level(ctx, level);
-	if (ret < 0)
-		return ret;
-
-	return count;
-}
-
-static ssize_t level_show(struct device *dev, struct device_attribute *attr,
-			  char *buf)
-{
-	struct khadas_mcu_fan_ctx *ctx = dev_get_drvdata(dev);
-
-	return sprintf(buf, "%u\n", ctx->level);
-}
-
-static SENSOR_DEVICE_ATTR_RW(level1, level, 0);
-
-static struct attribute *khadas_mcu_fan_attrs[] = {
-	&sensor_dev_attr_level1.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group khadas_mcu_fan_group = {
-	.attrs = khadas_mcu_fan_attrs,
-};
-
-static const struct attribute_group *khadas_mcu_fan_groups[] = {
-	&khadas_mcu_fan_group,
-	NULL,
-};
-
-/* thermal cooling device callbacks */
 static int khadas_mcu_fan_get_max_state(struct thermal_cooling_device *cdev,
 					unsigned long *state)
 {
@@ -135,7 +90,6 @@ static int khadas_mcu_fan_probe(struct platform_device *pdev)
 	struct thermal_cooling_device *cdev;
 	struct device *dev = &pdev->dev;
 	struct khadas_mcu_fan_ctx *ctx;
-	struct device *hwmon;
 	int ret;
 
 	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
@@ -144,28 +98,18 @@ static int khadas_mcu_fan_probe(struct platform_device *pdev)
 	ctx->mcu = mcu;
 	platform_set_drvdata(pdev, ctx);
 
-	hwmon = devm_hwmon_device_register_with_groups(dev, "khadas-mcu-fan",
-						       ctx,
-						       khadas_mcu_fan_groups);
-	if (IS_ERR(hwmon)) {
-		dev_err(dev, "Failed to register hwmon device\n");
-		return PTR_ERR(hwmon);
-	}
-
-	if (IS_ENABLED(CONFIG_THERMAL)) {
-		cdev = devm_thermal_of_cooling_device_register(dev->parent,
+	cdev = devm_thermal_of_cooling_device_register(dev->parent,
 			dev->parent->of_node, "khadas-mcu-fan", ctx,
 			&khadas_mcu_fan_cooling_ops);
-		if (IS_ERR(cdev)) {
-			ret = PTR_ERR(cdev);
-			dev_err(dev,
+	if (IS_ERR(cdev)) {
+		ret = PTR_ERR(cdev);
+		dev_err(dev,
 				"Failed to register khadas-mcu-fan as cooling device: %d\n",
 				ret);
-			return ret;
-		}
-		ctx->cdev = cdev;
-		thermal_cdev_update(cdev);
+		return ret;
 	}
+	ctx->cdev = cdev;
+	thermal_cdev_update(cdev);
 
 	return 0;
 }

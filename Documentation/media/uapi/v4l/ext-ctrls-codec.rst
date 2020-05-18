@@ -2673,12 +2673,12 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       stream is started and before the first decoding request is submitted
     * the referenced context might be read by the kernel when a decoding
       request is submitted, and will be updated after the decoder is done
-      decoding the frame ifthe V4L2_VP9_FRAME_FLAG_REFRESH_FRAME_CTX flag
-      is set
+      decoding the frame if the `V4L2_VP9_FRAME_FLAG_REFRESH_FRAME_CTX` flag
+      is set.
     * contexts will be read back by user space before each decoding request
-      to retrieve the updated probabilities
+      to retrieve the updated probabilities.
     * userspace will re-initialize the context to their default values when
-      a reset context is required
+      a reset context is required.
 
     .. note::
 
@@ -2871,7 +2871,7 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       - Array of reference frame timestamps.
     * - struct :c:type:`v4l2_vp9_loop_filter`
       - ``lf``
-      - Loop filter parameters. See struct :c:type:`v4l2_vp9_loop_filter.
+      - Loop filter parameters. See struct :c:type:`v4l2_vp9_loop_filter`.
     * - struct :c:type:`v4l2_vp9_quantization`
       - ``quant``
       - Quantization parameters. See :c:type:`v4l2_vp9_quantization`.
@@ -2895,7 +2895,7 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 
     * - ``V4L2_VP9_FRAME_FLAG_KEY_FRAME``
       - The frame is a key frame.
-    * - ``V4L2_VP9_FRAME_FLAG_SHOW_FRAME`
+    * - ``V4L2_VP9_FRAME_FLAG_SHOW_FRAME``
       - The frame should be displayed.
     * - ``V4L2_VP9_FRAME_FLAG_ERROR_RESILIENT``
       - The decoding should be error resilient.
@@ -2927,11 +2927,11 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 
     * - ``V4L2_REF_ID_LAST``
       - Last reference frame.
-    * - V4L2_REF_ID_GOLDEN
+    * - ``V4L2_REF_ID_GOLDEN``
       - Golden reference frame.
-    * - V4L2_REF_ID_ALTREF
+    * - ``V4L2_REF_ID_ALTREF``
       - Alternative reference frame.
-    * - V4L2_REF_ID_CNT
+    * - ``V4L2_REF_ID_CNT``
       - Number of reference frames.
 
 .. c:type:: v4l2_vp9_tx_mode
@@ -2951,7 +2951,7 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       - Transform size can be up to 8x8.
     * - ``V4L2_VP9_TX_MODE_ALLOW_16X16``
       - Transform size can be up to 16x16.
-    * - ``V4L2_VP9_TX_MODE_ALLOW_32X32`
+    * - ``V4L2_VP9_TX_MODE_ALLOW_32X32``
       - transform size can be up to 32x32.
     * - ``V4L2_VP9_TX_MODE_SELECT``
       - Bitstream contains transform size for each block.
@@ -3041,9 +3041,6 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 
     * - ``V4L2_VP9_RESET_FRAME_CTX_NONE``
       - Do not reset any frame context.
-    * - ``V4L2_VP9_RESET_FRAME_CTX_NONE_ALT``
-      - Do not reset any frame context. This is an alternative value for
-        V4L2_VP9_RESET_FRAME_CTX_NONE.
     * - ``V4L2_VP9_RESET_FRAME_CTX_SPEC``
       - Reset the frame context pointed by
         :c:type:`v4l2_ctrl_vp9_frame_decode_params`.frame_context_idx.

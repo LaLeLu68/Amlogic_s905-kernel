@@ -151,8 +151,8 @@ int hantro_vp8_dec_init(struct hantro_ctx *ctx)
 	int ret;
 
 	/* segment map table size calculation */
-	mb_width = MB_WIDTH(ctx->src_fmt.width);
-	mb_height = MB_HEIGHT(ctx->src_fmt.height);
+	mb_width = DIV_ROUND_UP(ctx->dst_fmt.width, 16);
+	mb_height = DIV_ROUND_UP(ctx->dst_fmt.height, 16);
 	segment_map_size = round_up(DIV_ROUND_UP(mb_width * mb_height, 4), 64);
 
 	/*
