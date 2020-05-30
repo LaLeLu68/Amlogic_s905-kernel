@@ -803,3 +803,6 @@
 &vopb_mmu {
 	status = "okay";
 };
+
+/delete-node/ &hdmi_in_vopl;
+/delete-node/ &vopl_out_hdmi;

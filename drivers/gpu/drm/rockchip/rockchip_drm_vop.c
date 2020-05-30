@@ -1036,6 +1036,34 @@ static void vop_crtc_disable_vblank(struct drm_crtc *crtc)
 	spin_unlock_irqrestore(&vop->irq_lock, flags);
 }
 
+/*
+ * The VESA DMT standard specifies a 0.5% pixel clock frequency tolerance.
+ * The CVT spec reuses that tolerance in its examples.
+ */
+#define	CLOCK_TOLERANCE_PER_MILLE	5
+
+static enum drm_mode_status vop_crtc_mode_valid(struct drm_crtc *crtc,
+					const struct drm_display_mode *mode)
+{
+	struct vop *vop = to_vop(crtc);
+	long rounded_rate;
+	long lowest, highest;
+
+	rounded_rate = clk_round_rate(vop->dclk, mode->clock * 1000 + 999);
+	if (rounded_rate < 0)
+		return MODE_NOCLOCK;
+
+	lowest = mode->clock * (1000 - CLOCK_TOLERANCE_PER_MILLE);
+	if (rounded_rate < lowest)
+		return MODE_CLOCK_LOW;
+
+	highest = mode->clock * (1000 + CLOCK_TOLERANCE_PER_MILLE);
+	if (rounded_rate > highest)
+		return MODE_CLOCK_HIGH;
+
+	return MODE_OK;
+}
+
 static bool vop_crtc_mode_fixup(struct drm_crtc *crtc,
 				const struct drm_display_mode *mode,
 				struct drm_display_mode *adjusted_mode)
@@ -1346,6 +1374,7 @@ static void vop_crtc_atomic_flush(struct drm_crtc *crtc,
 }
 
 static const struct drm_crtc_helper_funcs vop_crtc_helper_funcs = {
+	.mode_valid = vop_crtc_mode_valid,
 	.mode_fixup = vop_crtc_mode_fixup,
 	.atomic_check = vop_crtc_atomic_check,
 	.atomic_begin = vop_crtc_atomic_begin,
