@@ -92,10 +92,10 @@ static const u16 csc_coeff_rgb_in_eitu709[3][4] = {
 	{ 0x6756, 0x78ab, 0x2000, 0x0200 }
 };
 
-static const u16 csc_coeff_rgb_limited[3][4] = {
-	{ 0x1B7C, 0x0000, 0x0000, 0x0020 },
-	{ 0x0000, 0x1B7C, 0x0000, 0x0020 },
-	{ 0x0000, 0x0000, 0x1B7C, 0x0020 }
+static const u16 csc_coeff_rgb_full_to_rgb_limited[3][4] = {
+	{ 0x1b7c, 0x0000, 0x0000, 0x0020 },
+	{ 0x0000, 0x1b7c, 0x0000, 0x0020 },
+	{ 0x0000, 0x0000, 0x1b7c, 0x0020 }
 };
 
 struct hdmi_vmode {
@@ -963,15 +963,14 @@ static void hdmi_video_sample(struct dw_hdmi *hdmi)
 
 static int is_color_space_conversion(struct dw_hdmi *hdmi)
 {
-	return hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_in_bus_format) !=
-		hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_out_bus_format);
-}
+	struct hdmi_data_info *hdmi_data = &hdmi->hdmi_data;
+	bool is_input_rgb, is_output_rgb;
 
-static int is_rgb_downscale_needed(struct dw_hdmi *hdmi)
-{
-	return  hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_in_bus_format) &&
-		hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_out_bus_format) &&
-		hdmi->hdmi_data.rgb_limited_range;
+	is_input_rgb = hdmi_bus_fmt_is_rgb(hdmi_data->enc_in_bus_format);
+	is_output_rgb = hdmi_bus_fmt_is_rgb(hdmi_data->enc_out_bus_format);
+
+	return (is_input_rgb != is_output_rgb) ||
+	       (is_input_rgb && is_output_rgb && hdmi_data->rgb_limited_range);
 }
 
 static int is_color_space_decimation(struct dw_hdmi *hdmi)
@@ -998,30 +997,37 @@ static int is_color_space_interpolation(struct dw_hdmi *hdmi)
 	return 0;
 }
 
+static bool is_csc_needed(struct dw_hdmi *hdmi)
+{
+	return is_color_space_conversion(hdmi) ||
+	       is_color_space_decimation(hdmi) ||
+	       is_color_space_interpolation(hdmi);
+}
+
 static void dw_hdmi_update_csc_coeffs(struct dw_hdmi *hdmi)
 {
 	const u16 (*csc_coeff)[3][4] = &csc_coeff_default;
+	bool is_input_rgb, is_output_rgb;
 	unsigned i;
 	u32 csc_scale = 1;
 
-	if (is_color_space_conversion(hdmi)) {
-		if (hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_out_bus_format)) {
-			if (hdmi->hdmi_data.enc_out_encoding ==
-						V4L2_YCBCR_ENC_601)
-				csc_coeff = &csc_coeff_rgb_out_eitu601;
-			else
-				csc_coeff = &csc_coeff_rgb_out_eitu709;
-		} else if (hdmi_bus_fmt_is_rgb(
-					hdmi->hdmi_data.enc_in_bus_format)) {
-			if (hdmi->hdmi_data.enc_out_encoding ==
-						V4L2_YCBCR_ENC_601)
-				csc_coeff = &csc_coeff_rgb_in_eitu601;
-			else
-				csc_coeff = &csc_coeff_rgb_in_eitu709;
-			csc_scale = 0;
-		}
-	} else if (is_rgb_downscale_needed(hdmi)) {
-		csc_coeff = &csc_coeff_rgb_limited;
+	is_input_rgb = hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_in_bus_format);
+	is_output_rgb = hdmi_bus_fmt_is_rgb(hdmi->hdmi_data.enc_out_bus_format);
+
+	if (!is_input_rgb && is_output_rgb) {
+		if (hdmi->hdmi_data.enc_out_encoding == V4L2_YCBCR_ENC_601)
+			csc_coeff = &csc_coeff_rgb_out_eitu601;
+		else
+			csc_coeff = &csc_coeff_rgb_out_eitu709;
+	} else if (is_input_rgb && !is_output_rgb) {
+		if (hdmi->hdmi_data.enc_out_encoding == V4L2_YCBCR_ENC_601)
+			csc_coeff = &csc_coeff_rgb_in_eitu601;
+		else
+			csc_coeff = &csc_coeff_rgb_in_eitu709;
+		csc_scale = 0;
+	} else if (is_input_rgb && is_output_rgb &&
+		   hdmi->hdmi_data.rgb_limited_range) {
+		csc_coeff = &csc_coeff_rgb_full_to_rgb_limited;
 	}
 
 	/* The CSC registers are sequential, alternating MSB then LSB */
@@ -2037,18 +2043,19 @@ static void dw_hdmi_enable_video_path(struct dw_hdmi *hdmi)
 	hdmi_writeb(hdmi, hdmi->mc_clkdis, HDMI_MC_CLKDIS);
 
 	/* Enable csc path */
-	if (is_color_space_conversion(hdmi) || is_rgb_downscale_needed(hdmi)) {
+	if (is_csc_needed(hdmi)) {
 		hdmi->mc_clkdis &= ~HDMI_MC_CLKDIS_CSCCLK_DISABLE;
 		hdmi_writeb(hdmi, hdmi->mc_clkdis, HDMI_MC_CLKDIS);
-	}
 
-	/* Enable color space conversion if needed */
-	if (is_color_space_conversion(hdmi) || is_rgb_downscale_needed(hdmi))
 		hdmi_writeb(hdmi, HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_IN_PATH,
 			    HDMI_MC_FLOWCTRL);
-	else
+	} else {
+		hdmi->mc_clkdis |= HDMI_MC_CLKDIS_CSCCLK_DISABLE;
+		hdmi_writeb(hdmi, hdmi->mc_clkdis, HDMI_MC_CLKDIS);
+
 		hdmi_writeb(hdmi, HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_BYPASS,
 			    HDMI_MC_FLOWCTRL);
+	}
 }
 
 /* Workaround to clear the overflow condition */

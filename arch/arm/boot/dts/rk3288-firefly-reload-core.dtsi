@@ -261,6 +261,7 @@
 	status = "okay";
 };
 
+
 &wdt {
 	status = "okay";
 };
