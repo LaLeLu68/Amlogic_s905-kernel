@@ -7,9 +7,9 @@
 /dts-v1/;
 
 #include "meson-g12b-s922x.dtsi"
-#include "meson-g12-audio-hdmi.dtsi"
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/meson-g12a-gpio.h>
+#include <dt-bindings/sound/meson-g12a-tohdmitx.h>
 
 / {
 	compatible = "hardkernel,odroid-n2", "amlogic,s922x", "amlogic,g12b";
@@ -40,6 +40,7 @@
 		blue {
 			label = "n2:blue";
 			gpios = <&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
 		};
 	};
 
@@ -205,6 +206,64 @@
 		};
 	};
 
+	sound {
+		compatible = "amlogic,axg-sound-card";
+		model = "G12B-ODROID-N2";
+		audio-aux-devs = <&tdmout_b>;
+		audio-routing = "TDMOUT_B IN 0", "FRDDR_A OUT 1",
+				"TDMOUT_B IN 1", "FRDDR_B OUT 1",
+				"TDMOUT_B IN 2", "FRDDR_C OUT 1",
+				"TDM_B Playback", "TDMOUT_B OUT";
+
+		assigned-clocks = <&clkc CLKID_MPLL2>,
+				  <&clkc CLKID_MPLL0>,
+				  <&clkc CLKID_MPLL1>;
+		assigned-clock-parents = <0>, <0>, <0>;
+		assigned-clock-rates = <294912000>,
+				       <270950400>,
+				       <393216000>;
+		status = "okay";
+
+		dai-link-0 {
+			sound-dai = <&frddr_a>;
+		};
+
+		dai-link-1 {
+			sound-dai = <&frddr_b>;
+		};
+
+		dai-link-2 {
+			sound-dai = <&frddr_c>;
+		};
+
+		/* 8ch hdmi interface */
+		dai-link-3 {
+			sound-dai = <&tdmif_b>;
+			dai-format = "i2s";
+			dai-tdm-slot-tx-mask-0 = <1 1>;
+			dai-tdm-slot-tx-mask-1 = <1 1>;
+			dai-tdm-slot-tx-mask-2 = <1 1>;
+			dai-tdm-slot-tx-mask-3 = <1 1>;
+			mclk-fs = <256>;
+
+			codec {
+				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_B>;
+			};
+		};
+
+		/* hdmi glue */
+		dai-link-4 {
+			sound-dai = <&tohdmitx TOHDMITX_I2S_OUT>;
+
+			codec {
+				sound-dai = <&hdmi_tx>;
+			};
+		};
+	};
+};
+
+&arb {
+	status = "okay";
 };
 
 &cec_AO {
@@ -219,6 +278,10 @@
 	pinctrl-names = "default";
 	status = "okay";
 	hdmi-phandle = <&hdmi_tx>;
+};
+
+&clkc_audio {
+	status = "okay";
 };
 
 &cpu0 {
@@ -288,6 +351,18 @@
 	amlogic,tx-delay-ns = <2>;
 };
 
+&frddr_a {
+	status = "okay";
+};
+
+&frddr_b {
+	status = "okay";
+};
+
+&frddr_c {
+	status = "okay";
+};
+
 &gpio {
 	/*
 	 * WARNING: The USB Hub on the Odroid-N2 needs a reset signal
@@ -321,6 +396,47 @@
 	pinctrl-0 = <&remote_input_ao_pins>;
 	pinctrl-names = "default";
 	linux,rc-map-name = "rc-odroid";
+};
+
+&i2c3_sda_a_pins {
+	mux {
+		groups = "i2c3_sda_a";
+		function = "i2c3";
+		bias-pull-up;
+		drive-strength-microamp = <3000>;
+	};
+};
+
+&i2c3_sck_a_pins {
+	mux {
+		groups = "i2c3_sck_a";
+		function = "i2c3";
+		bias-pull-up;
+		drive-strength-microamp = <3000>;
+	};
+};
+
+&i2c3 {
+	status = "okay";
+	pinctrl-names = "default","gpio_periphs";
+	pinctrl-0 = <&i2c3_sck_a_pins &i2c3_sda_a_pins>;
+	pinctrl-1 = <&i2c3_to_gpioa>;
+	clock-frequency = <100000>;  /* default 100k */
+
+	pcf8563: rtc@51 {  /* i2c-bus address: read A3h, write A2h */
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
+};
+
+&periphs_pinctrl {
+	i2c3_to_gpioa:i2c3_gpioa {
+		mux {
+			groups = "GPIOA_14", "GPIOA_15";
+			function = "gpio_periphs";
+			drive-strength-microamp = <3000>;
+		};
+	};
 };
 
 &pwm_ab {
@@ -395,6 +511,18 @@
 		reg = <0>;
 		spi-max-frequency = <104000000>;
 	};
+};
+
+&tdmif_b {
+	status = "okay";
+};
+
+&tdmout_b {
+	status = "okay";
+};
+
+&tohdmitx {
+	status = "okay";
 };
 
 &uart_AO {
