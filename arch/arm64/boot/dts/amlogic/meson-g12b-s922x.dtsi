@@ -70,7 +70,6 @@
 			opp-hz = /bits/ 64 <1992000000>;
 			opp-microvolt = <1001000>;
 		};
-
 	};
 
 	cpub_opp_table_1: opp-table-1 {
@@ -136,6 +135,5 @@
 			opp-hz = /bits/ 64 <1908000000>;
 			opp-microvolt = <1022000>;
 		};
-
 	};
 };

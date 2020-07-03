@@ -821,12 +821,22 @@ extern "C" {
  * - DRM_FORMAT_YUV420_10BIT
  *
  * The first 8 bits of the mode defines the layout, then the following 8 bits
- * defined the options changing the layout.
+ * defines the options changing the layout.
  *
  * Not all combinations are valid, and different SoCs may support different
  * combinations of layout and options.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC(__modes) fourcc_mod_code(AMLOGIC, __modes)
+#define __fourcc_mod_amlogic_layout_mask 0xf
+#define __fourcc_mod_amlogic_options_shift 8
+#define __fourcc_mod_amlogic_options_mask 0xf
+
+#define DRM_FORMAT_MOD_AMLOGIC_FBC(__layout, __options) \
+	fourcc_mod_code(AMLOGIC, \
+			((__layout) & __fourcc_mod_amlogic_layout_mask) | \
+			((__options) & __fourcc_mod_amlogic_options_mask \
+			 << __fourcc_mod_amlogic_options_shift))
+
+/* Amlogic FBC Layouts */
 
 /*
  * Amlogic FBC Basic Layout
@@ -838,7 +848,7 @@ extern "C" {
  *
  * This layout is transferrable between Amlogic SoCs supporting this modifier.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_BASIC		(1ULL << 0)
+#define AMLOGIC_FBC_LAYOUT_BASIC		(1ULL)
 
 /*
  * Amlogic FBC Scatter Memory layout
@@ -851,11 +861,9 @@ extern "C" {
  * execution and cannot be saved/dumped neither transferrable between
  * Amlogic SoCs supporting this modifier.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_SCATTER	(2ULL << 0)
+#define AMLOGIC_FBC_LAYOUT_SCATTER		(2ULL)
 
-/*
- * Amlogic FBC Layout Options
- */
+/* Amlogic FBC Layout Options Bit Mask */
 
 /*
  * Amlogic FBC Memory Saving mode
@@ -868,7 +876,7 @@ extern "C" {
  * the basic layout and 3200 bytes per 64x32 superblock combined with
  * the scatter layout.
  */
-#define DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING	(1ULL << 8)
+#define AMLOGIC_FBC_OPTION_MEM_SAVING		(1ULL << 0)
 
 #if defined(__cplusplus)
 }

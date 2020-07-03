@@ -14,17 +14,6 @@
 	compatible = "amlogic,meson-gxl";
 
 	soc {
-		acodec: audio-controller@c8832000 {
-			compatible = "amlogic,t9015";
-			reg = <0x0 0xc8832000 0x0 0x14>;
-			#sound-dai-cells = <0>;
-			sound-name-prefix = "ACODEC";
-			clocks = <&clkc CLKID_ACODEC>;
-			clock-names = "pclk";
-			resets = <&reset RESET_ACODEC>;
-			status = "disabled";
-		};
-
 		usb0: usb@c9000000 {
 			status = "disabled";
 			compatible = "amlogic,meson-gxl-dwc3";
@@ -46,6 +35,17 @@
 				snps,dis_u2_susphy_quirk;
 				phys = <&usb3_phy>, <&usb2_phy0>, <&usb2_phy1>;
 			};
+		};
+
+		acodec: audio-controller@c8832000 {
+			compatible = "amlogic,t9015";
+			reg = <0x0 0xc8832000 0x0 0x14>;
+			#sound-dai-cells = <0>;
+			sound-name-prefix = "ACODEC";
+			clocks = <&clkc CLKID_ACODEC>;
+			clock-names = "pclk";
+			resets = <&reset RESET_ACODEC>;
+			status = "disabled";
 		};
 
 		crypto: crypto@c883e000 {
@@ -330,6 +330,11 @@
 		clocks = <&xtal>;
 		clock-names = "xtal";
 	};
+};
+
+&hwrng {
+	clocks = <&clkc CLKID_RNG0>;
+	clock-names = "core";
 };
 
 &i2c_A {

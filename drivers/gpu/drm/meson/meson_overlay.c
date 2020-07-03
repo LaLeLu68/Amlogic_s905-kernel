@@ -479,19 +479,21 @@ static void meson_overlay_atomic_update(struct drm_plane *plane,
 
 	spin_lock_irqsave(&priv->drm->event_lock, flags);
 
-	if ((fb->modifier & DRM_FORMAT_MOD_AMLOGIC_FBC(0)) ==
-			    DRM_FORMAT_MOD_AMLOGIC_FBC(0)) {
+	if ((fb->modifier & DRM_FORMAT_MOD_AMLOGIC_FBC(0, 0)) ==
+			    DRM_FORMAT_MOD_AMLOGIC_FBC(0, 0)) {
 		priv->viu.vd1_afbc = true;
 
 		priv->viu.vd1_afbc_mode = AFBC_MIF_URGENT(3) |
 					  AFBC_HOLD_LINE_NUM(8) |
 					  AFBC_BURST_LEN(2);
 
-		if (fb->modifier & DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_SCATTER)
-			priv->viu.vd1_afbc_mode |= AFBC_SCATTER_MODE;
-
-		if (fb->modifier & DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING)
+		if (fb->modifier & DRM_FORMAT_MOD_AMLOGIC_FBC(0,
+						AMLOGIC_FBC_OPTION_MEM_SAVING))
 			priv->viu.vd1_afbc_mode |= AFBC_BLK_MEM_MODE;
+
+		if ((fb->modifier & __fourcc_mod_amlogic_layout_mask) ==
+				AMLOGIC_FBC_LAYOUT_SCATTER)
+			priv->viu.vd1_afbc_mode |= AFBC_SCATTER_MODE;
 
 		priv->viu.vd1_afbc_en = 0x1600 | AFBC_DEC_ENABLE;
 
@@ -750,11 +752,41 @@ static bool meson_overlay_format_mod_supported(struct drm_plane *plane,
 	    format != DRM_FORMAT_YUV420_10BIT)
 		return true;
 
-	if ((modifier & DRM_FORMAT_MOD_AMLOGIC_FBC(0)) ==
-			DRM_FORMAT_MOD_AMLOGIC_FBC(0) &&
-	    (format == DRM_FORMAT_YUV420_8BIT ||
-	     format == DRM_FORMAT_YUV420_10BIT))
+	if ((modifier & DRM_FORMAT_MOD_AMLOGIC_FBC(0, 0)) ==
+			DRM_FORMAT_MOD_AMLOGIC_FBC(0, 0)) {
+		unsigned int layout = modifier &
+			DRM_FORMAT_MOD_AMLOGIC_FBC(
+				__fourcc_mod_amlogic_layout_mask, 0);
+		unsigned int options =
+			(modifier >> __fourcc_mod_amlogic_options_shift) &
+			__fourcc_mod_amlogic_options_mask;
+
+		if (format != DRM_FORMAT_YUV420_8BIT &&
+		    format != DRM_FORMAT_YUV420_10BIT) {
+			DRM_DEBUG_KMS("%llx invalid format 0x%08x\n",
+				      modifier, format);
+			return false;
+		}
+
+		if (layout != AMLOGIC_FBC_LAYOUT_BASIC &&
+		    layout != AMLOGIC_FBC_LAYOUT_SCATTER) {
+			DRM_DEBUG_KMS("%llx invalid layout %x\n",
+				      modifier, layout);
+			return false;
+		}
+
+		if (options &&
+		    options != AMLOGIC_FBC_OPTION_MEM_SAVING) {
+			DRM_DEBUG_KMS("%llx invalid layout %x\n",
+				      modifier, layout);
+			return false;
+		}
+
 		return true;
+	}
+
+	DRM_DEBUG_KMS("invalid modifier %llx for format 0x%08x\n",
+		      modifier, format);
 
 	return false;
 }
@@ -783,11 +815,12 @@ static const uint32_t supported_drm_formats[] = {
 };
 
 static const uint64_t format_modifiers[] = {
-	DRM_FORMAT_MOD_AMLOGIC_FBC(DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_SCATTER |
-				   DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING),
-	DRM_FORMAT_MOD_AMLOGIC_FBC(DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_BASIC |
-				   DRM_FORMAT_MOD_AMLOGIC_FBC_MEM_SAVING),
-	DRM_FORMAT_MOD_AMLOGIC_FBC(DRM_FORMAT_MOD_AMLOGIC_FBC_LAYOUT_BASIC),
+	DRM_FORMAT_MOD_AMLOGIC_FBC(AMLOGIC_FBC_LAYOUT_SCATTER,
+				   AMLOGIC_FBC_OPTION_MEM_SAVING),
+	DRM_FORMAT_MOD_AMLOGIC_FBC(AMLOGIC_FBC_LAYOUT_BASIC,
+				   AMLOGIC_FBC_OPTION_MEM_SAVING),
+	DRM_FORMAT_MOD_AMLOGIC_FBC(AMLOGIC_FBC_LAYOUT_SCATTER, 0),
+	DRM_FORMAT_MOD_AMLOGIC_FBC(AMLOGIC_FBC_LAYOUT_BASIC, 0),
 	DRM_FORMAT_MOD_LINEAR,
 	DRM_FORMAT_MOD_INVALID,
 };
