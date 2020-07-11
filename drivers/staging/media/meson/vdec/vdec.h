@@ -17,6 +17,9 @@
 
 #include "vdec_platform.h"
 
+/* MMU header size for codecs using the IOMMU + FBC */
+#define MMU_COMPRESS_HEADER_SIZE 0x48000
+
 /* 32 buffers in 3-plane YUV420 */
 #define MAX_CANVAS (32 * 3)
 
@@ -234,6 +237,7 @@ struct amvdec_session {
 	u32 width;
 	u32 height;
 	u32 colorspace;
+	u32 bitdepth;
 	u8 ycbcr_enc;
 	u8 quantization;
 	u8 xfer_func;

@@ -90,9 +90,9 @@
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pwr_led_pin &slp_led_pin>;
+		pinctrl-0 = <&pwrled_gpio &slpled_gpio>;
 
-		green_led: led-0 {
+		green-led {
 			color = <LED_COLOR_ID_GREEN>;
 			default-state = "on";
 			function = LED_FUNCTION_POWER;
@@ -100,7 +100,7 @@
 			label = "green:power";
 		};
 
-		red_led: led-1 {
+		red-led {
 			color = <LED_COLOR_ID_RED>;
 			default-state = "off";
 			function = LED_FUNCTION_STANDBY;
@@ -825,11 +825,11 @@
 	};
 
 	leds {
-		pwr_led_pin: pwr-led-pin {
+		pwrled_gpio: pwrled_gpio {
 			rockchip,pins = <0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-		slp_led_pin: slp-led-pin {
+		slpled_gpio: slpled_gpio {
 			rockchip,pins = <0 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};

@@ -50,32 +50,47 @@ void amvdec_write_parser(struct amvdec_core *core, u32 reg, u32 val)
 }
 EXPORT_SYMBOL_GPL(amvdec_write_parser);
 
-/* 4 KiB per 64x32 block */
-u32 amvdec_am21c_body_size(u32 width, u32 height)
+/* AMFBC body is made out of 64x32 blocks with varying block size */
+u32 amvdec_amfbc_body_size(u32 width, u32 height, u32 is_10bit, u32 use_mmu)
 {
 	u32 width_64 = ALIGN(width, 64) / 64;
 	u32 height_32 = ALIGN(height, 32) / 32;
+	u32 blk_size = 4096;
 
-	return SZ_4K * width_64 * height_32;
+	if (!is_10bit) {
+		if (use_mmu)
+			blk_size = 3200;
+		else
+			blk_size = 3072;
+	}
+
+	return blk_size * width_64 * height_32;
 }
-EXPORT_SYMBOL_GPL(amvdec_am21c_body_size);
+EXPORT_SYMBOL_GPL(amvdec_amfbc_body_size);
 
 /* 32 bytes per 128x64 block */
-u32 amvdec_am21c_head_size(u32 width, u32 height)
+u32 amvdec_amfbc_head_size(u32 width, u32 height)
 {
 	u32 width_128 = ALIGN(width, 128) / 128;
 	u32 height_64 = ALIGN(height, 64) / 64;
 
 	return 32 * width_128 * height_64;
 }
-EXPORT_SYMBOL_GPL(amvdec_am21c_head_size);
+EXPORT_SYMBOL_GPL(amvdec_amfbc_head_size);
 
-u32 amvdec_am21c_size(u32 width, u32 height)
+u32 amvdec_amfbc_size(u32 width, u32 height, u32 is_10bit, u32 use_mmu)
 {
-	return ALIGN(amvdec_am21c_body_size(width, height) +
-		     amvdec_am21c_head_size(width, height), SZ_64K);
+	return ALIGN(amvdec_amfbc_body_size(width, height, is_10bit, use_mmu) +
+		     amvdec_amfbc_head_size(width, height), SZ_64K);
 }
-EXPORT_SYMBOL_GPL(amvdec_am21c_size);
+EXPORT_SYMBOL_GPL(amvdec_amfbc_size);
+
+u32 amvdec_is_dst_fbc(struct amvdec_session *sess)
+{
+	return sess->pixfmt_cap == V4L2_PIX_FMT_YUV420_8BIT ||
+	       sess->pixfmt_cap == V4L2_PIX_FMT_YUV420_10BIT;
+}
+EXPORT_SYMBOL_GPL(amvdec_is_dst_fbc);
 
 static int canvas_alloc(struct amvdec_session *sess, u8 *canvas_id)
 {
@@ -284,6 +299,22 @@ static void dst_buf_done(struct amvdec_session *sess,
 		vbuf->vb2_buf.planes[1].bytesused = output_size / 4;
 		vbuf->vb2_buf.planes[2].bytesused = output_size / 4;
 		break;
+	case V4L2_PIX_FMT_YUV420_8BIT:
+		if (sess->core->platform->revision >= VDEC_REVISION_G12A)
+			vbuf->vb2_buf.planes[0].bytesused =
+				MMU_COMPRESS_HEADER_SIZE;
+		else
+			vbuf->vb2_buf.planes[0].bytesused =
+			   amvdec_amfbc_size(sess->width, sess->height, 0, 0);
+		break;
+	case V4L2_PIX_FMT_YUV420_10BIT:
+		if (sess->core->platform->revision >= VDEC_REVISION_G12A)
+			vbuf->vb2_buf.planes[0].bytesused =
+				MMU_COMPRESS_HEADER_SIZE;
+		else
+			vbuf->vb2_buf.planes[0].bytesused =
+			   amvdec_amfbc_size(sess->width, sess->height, 1, 0);
+		break;
 	}
 
 	vbuf->vb2_buf.timestamp = timestamp;
@@ -436,7 +467,7 @@ void amvdec_set_par_from_dar(struct amvdec_session *sess,
 EXPORT_SYMBOL_GPL(amvdec_set_par_from_dar);
 
 void amvdec_src_change(struct amvdec_session *sess, u32 width,
-		       u32 height, u32 dpb_size)
+		       u32 height, u32 dpb_size, u32 bitdepth)
 {
 	static const struct v4l2_event ev = {
 		.type = V4L2_EVENT_SOURCE_CHANGE,
@@ -451,7 +482,8 @@ void amvdec_src_change(struct amvdec_session *sess, u32 width,
 	if (sess->streamon_cap &&
 	    sess->width == width &&
 	    sess->height == height &&
-	    dpb_size <= sess->num_dst_bufs) {
+	    dpb_size <= sess->num_dst_bufs &&
+	    sess->bitdepth == bitdepth) {
 		sess->fmt_out->codec_ops->resume(sess);
 		return;
 	}
@@ -460,9 +492,17 @@ void amvdec_src_change(struct amvdec_session *sess, u32 width,
 	sess->width = width;
 	sess->height = height;
 	sess->status = STATUS_NEEDS_RESUME;
+	sess->bitdepth = bitdepth;
 
-	dev_dbg(sess->core->dev, "Res. changed (%ux%u), DPB size %u\n",
-		width, height, dpb_size);
+	if (sess->pixfmt_cap == V4L2_PIX_FMT_YUV420_8BIT &&
+	    bitdepth == 10)
+		sess->pixfmt_cap = V4L2_PIX_FMT_YUV420_10BIT;
+	else if (sess->pixfmt_cap == V4L2_PIX_FMT_YUV420_10BIT &&
+		 bitdepth == 8)
+		sess->pixfmt_cap = V4L2_PIX_FMT_YUV420_8BIT;
+
+	dev_dbg(sess->core->dev, "Res. changed (%ux%u), DPB %u, bitdepth %u\n",
+		width, height, dpb_size, bitdepth);
 	v4l2_event_queue_fh(&sess->fh, &ev);
 }
 EXPORT_SYMBOL_GPL(amvdec_src_change);

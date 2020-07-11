@@ -448,7 +448,7 @@ void meson_crtc_irq(struct meson_drm *priv)
 						    MESON_CANVAS_WRAP_NONE,
 						    MESON_CANVAS_BLKMODE_LINEAR,
 						    MESON_CANVAS_ENDIAN_SWAP64);
-			/* fallthrough */
+				fallthrough;
 			case 2:
 				meson_canvas_config(priv->canvas,
 						    priv->canvas_id_vd1_1,
@@ -458,7 +458,7 @@ void meson_crtc_irq(struct meson_drm *priv)
 						    MESON_CANVAS_WRAP_NONE,
 						    MESON_CANVAS_BLKMODE_LINEAR,
 						    MESON_CANVAS_ENDIAN_SWAP64);
-			/* fallthrough */
+				fallthrough;
 			case 1:
 				meson_canvas_config(priv->canvas,
 						    priv->canvas_id_vd1_0,
