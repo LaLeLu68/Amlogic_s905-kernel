@@ -16,6 +16,7 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/pm.h>
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -26,6 +27,50 @@
 #include "cedrus_video.h"
 #include "cedrus_dec.h"
 #include "cedrus_hw.h"
+
+static int cedrus_try_ctrl(struct v4l2_ctrl *ctrl)
+{
+	if (ctrl->id == V4L2_CID_MPEG_VIDEO_H264_SPS) {
+		const struct v4l2_ctrl_h264_sps *sps = ctrl->p_new.p_h264_sps;
+
+		if (sps->chroma_format_idc != 1)
+			/* Only 4:2:0 is supported */
+			return -EINVAL;
+		if (sps->bit_depth_luma_minus8 != sps->bit_depth_chroma_minus8)
+			/* Luma and chroma bit depth mismatch */
+			return -EINVAL;
+		if (sps->bit_depth_luma_minus8 != 0)
+			/* Only 8-bit is supported */
+			return -EINVAL;
+	} else if (ctrl->id == V4L2_CID_MPEG_VIDEO_HEVC_SPS) {
+		const struct v4l2_ctrl_hevc_sps *sps = ctrl->p_new.p_hevc_sps;
+		struct cedrus_ctx *ctx = container_of(ctrl->handler, struct cedrus_ctx, hdl);
+
+		if (sps->chroma_format_idc != 1)
+			/* Only 4:2:0 is supported */
+			return -EINVAL;
+
+		if (sps->bit_depth_luma_minus8 != sps->bit_depth_chroma_minus8)
+			/* Luma and chroma bit depth mismatch */
+			return -EINVAL;
+
+		if (ctx->dev->capabilities & CEDRUS_CAPABILITY_H265_10_DEC) {
+			if (sps->bit_depth_luma_minus8 != 0 && sps->bit_depth_luma_minus8 != 2)
+				/* Only 8-bit and 10-bit are supported */
+				return -EINVAL;
+		} else {
+			if (sps->bit_depth_luma_minus8 != 0)
+				/* Only 8-bit is supported */
+				return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops cedrus_ctrl_ops = {
+	.try_ctrl = cedrus_try_ctrl,
+};
 
 static const struct cedrus_control cedrus_controls[] = {
 	{
@@ -59,6 +104,7 @@ static const struct cedrus_control cedrus_controls[] = {
 	{
 		.cfg = {
 			.id	= V4L2_CID_MPEG_VIDEO_H264_SPS,
+			.ops	= &cedrus_ctrl_ops,
 		},
 		.codec		= CEDRUS_CODEC_H264,
 		.required	= true,
@@ -98,6 +144,7 @@ static const struct cedrus_control cedrus_controls[] = {
 	{
 		.cfg = {
 			.id	= V4L2_CID_MPEG_VIDEO_HEVC_SPS,
+			.ops	= &cedrus_ctrl_ops,
 		},
 		.codec		= CEDRUS_CODEC_H265,
 		.required	= true,
@@ -140,6 +187,13 @@ static const struct cedrus_control cedrus_controls[] = {
 		},
 		.codec		= CEDRUS_CODEC_H265,
 		.required	= false,
+	},
+	{
+		.cfg = {
+			.id		= V4L2_CID_MPEG_VIDEO_VP8_FRAME_HEADER,
+		},
+		.codec		= CEDRUS_CODEC_VP8,
+		.required	= true,
 	},
 };
 
@@ -387,6 +441,7 @@ static int cedrus_probe(struct platform_device *pdev)
 	dev->dec_ops[CEDRUS_CODEC_MPEG2] = &cedrus_dec_ops_mpeg2;
 	dev->dec_ops[CEDRUS_CODEC_H264] = &cedrus_dec_ops_h264;
 	dev->dec_ops[CEDRUS_CODEC_H265] = &cedrus_dec_ops_h265;
+	dev->dec_ops[CEDRUS_CODEC_VP8] = &cedrus_dec_ops_vp8;
 
 	mutex_init(&dev->dev_mutex);
 
@@ -516,7 +571,8 @@ static const struct cedrus_variant sun50i_h5_cedrus_variant = {
 
 static const struct cedrus_variant sun50i_h6_cedrus_variant = {
 	.capabilities	= CEDRUS_CAPABILITY_UNTILED |
-			  CEDRUS_CAPABILITY_H265_DEC,
+			  CEDRUS_CAPABILITY_H265_DEC |
+			  CEDRUS_CAPABILITY_H265_10_DEC,
 	.quirks		= CEDRUS_QUIRK_NO_DMA_OFFSET,
 	.mod_rate	= 600000000,
 };
@@ -558,12 +614,18 @@ static const struct of_device_id cedrus_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cedrus_dt_match);
 
+static const struct dev_pm_ops cedrus_dev_pm_ops = {
+	SET_RUNTIME_PM_OPS(cedrus_hw_suspend,
+			   cedrus_hw_resume, NULL)
+};
+
 static struct platform_driver cedrus_driver = {
 	.probe		= cedrus_probe,
 	.remove		= cedrus_remove,
 	.driver		= {
 		.name		= CEDRUS_NAME,
 		.of_match_table	= of_match_ptr(cedrus_dt_match),
+		.pm		= &cedrus_dev_pm_ops,
 	},
 };
 module_platform_driver(cedrus_driver);
