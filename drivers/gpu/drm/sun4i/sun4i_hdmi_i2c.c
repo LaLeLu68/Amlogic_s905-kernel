@@ -159,7 +159,7 @@ static int sun4i_hdmi_i2c_xfer(struct i2c_adapter *adap,
 
 	/* DDC clock needs to be enabled for the module to work */
 	clk_prepare_enable(hdmi->ddc_clk);
-	//clk_set_rate(hdmi->ddc_clk, 100000);
+	clk_set_rate(hdmi->ddc_clk, 100000);
 
 	/* Reset I2C controller */
 	regmap_field_write(hdmi->field_ddc_en, 1);
