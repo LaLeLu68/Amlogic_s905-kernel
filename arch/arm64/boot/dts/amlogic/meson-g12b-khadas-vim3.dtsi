@@ -182,11 +182,11 @@
 	status = "okay";
 };
 
-&tdmif_a {
+&tdmif_b {
 	status = "okay";
 };
 
-&tdmout_a {
+&tdmout_b {
 	status = "okay";
 };
 
