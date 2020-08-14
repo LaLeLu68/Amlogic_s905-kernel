@@ -163,12 +163,12 @@ properties:
       - description: Boards with the Amlogic Meson SM1 S905X3/D3/Y3 SoC
         items:
           - enum:
+              - amediatech,x96-air-2g
+              - amediatech,x96-air-4g
               - cyx,a95xf3-air
-              - seirobotics,sei610
-              - khadas,vim3l
               - hardkernel,odroid-c4
-              - sunvell,t95-max
-              - amediatech,x96-air
+              - khadas,vim3l
+              - seirobotics,sei610
           - const: amlogic,sm1
 
       - description: Boards with the Amlogic Meson A1 A113L SoC
