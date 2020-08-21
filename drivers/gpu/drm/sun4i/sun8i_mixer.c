@@ -339,8 +339,51 @@ const struct de2_fmt_info *sun8i_mixer_format_info(u32 format)
 
 static void sun8i_mixer_commit(struct sunxi_engine *engine)
 {
-	DRM_DEBUG_DRIVER("Committing changes\n");
+	struct sun8i_mixer *mixer = engine_to_sun8i_mixer(engine);
+	int channel_by_zpos[SUN8I_MIXER_MAX_CHANNELS];
+	u32 base = sun8i_blender_base(mixer);
+	u32 route = 0, pipe_ctl = 0;
+	unsigned int channel_count;
+	int i, j;
 
+	channel_count = mixer->cfg->vi_num + mixer->cfg->ui_num;
+
+	DRM_DEBUG_DRIVER("Update blender routing\n");
+
+	for (i = 0; i < SUN8I_MIXER_MAX_CHANNELS; i++)
+		channel_by_zpos[i] = -1;
+
+	for (i = 0; i < channel_count; i++)	{
+		int zpos = mixer->channel_zpos[i];
+
+		if (zpos >= 0 && zpos < channel_count)
+			channel_by_zpos[zpos] = i;
+	}
+
+	j = 0;
+	for (i = 0; i < channel_count; i++) {
+		int ch = channel_by_zpos[i];
+
+		if (ch >= 0) {
+			pipe_ctl |= SUN8I_MIXER_BLEND_PIPE_CTL_EN(j);
+			route |= ch << SUN8I_MIXER_BLEND_ROUTE_PIPE_SHIFT(j);
+			j++;
+		}
+	}
+
+	/*
+	 * Set fill color of bottom plane to black. Generally not needed
+	 * except when VI plane is at bottom (zpos = 0) and enabled.
+	 */
+	pipe_ctl |= SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0);
+
+	regmap_write(mixer->engine.regs,
+		     SUN8I_MIXER_BLEND_PIPE_CTL(base), pipe_ctl);
+
+	regmap_write(mixer->engine.regs,
+		     SUN8I_MIXER_BLEND_ROUTE(base), route);
+
+	DRM_DEBUG_DRIVER("Committing changes\n");
 	regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_DBUFF,
 		     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 }
@@ -392,11 +435,23 @@ static const struct sunxi_engine_ops sun8i_engine_ops = {
 	.layers_init	= sun8i_layers_init,
 };
 
+static bool sun8i_mixer_volatile_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case SUN8I_MIXER_GLOBAL_STATUS:
+	case SUN8I_MIXER_GLOBAL_DBUFF:
+		return true;
+	}
+	return false;
+}
+
 static struct regmap_config sun8i_mixer_regmap_config = {
+	.cache_type	= REGCACHE_FLAT,
 	.reg_bits	= 32,
 	.val_bits	= 32,
 	.reg_stride	= 4,
 	.max_register	= 0xbfffc, /* guessed */
+	.volatile_reg	= sun8i_mixer_volatile_reg,
 };
 
 static int sun8i_mixer_of_get_id(struct device_node *node)
@@ -555,23 +610,16 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_BKCOLOR(base),
 		     SUN8I_MIXER_BLEND_COLOR_BLACK);
 
-	/*
-	 * Set fill color of bottom plane to black. Generally not needed
-	 * except when VI plane is at bottom (zpos = 0) and enabled.
-	 */
-	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
-		     SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0));
 	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(base, 0),
 		     SUN8I_MIXER_BLEND_COLOR_BLACK);
 
 	plane_cnt = mixer->cfg->vi_num + mixer->cfg->ui_num;
-	for (i = 0; i < plane_cnt; i++)
+	for (i = 0; i < plane_cnt; i++) {
 		regmap_write(mixer->engine.regs,
 			     SUN8I_MIXER_BLEND_MODE(base, i),
 			     SUN8I_MIXER_BLEND_MODE_DEF);
-
-	regmap_update_bits(mixer->engine.regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN_MSK, 0);
+		mixer->channel_zpos[i] = -1;
+	}
 
 	return 0;
 
