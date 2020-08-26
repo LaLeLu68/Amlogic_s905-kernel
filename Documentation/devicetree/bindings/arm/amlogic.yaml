@@ -17,7 +17,7 @@ description: |+
   any time. Be sure to use a device tree binary and a kernel image
   generated from the same source tree.
 
-  Please refer to Documentation/devicetree/bindings/ABI.txt for a definition of a
+  Please refer to Documentation/devicetree/bindings/ABI.rst for a definition of a
   stable binding/ABI.
 
 properties:
@@ -151,7 +151,6 @@ properties:
       - description: Boards with the Amlogic Meson G12B S922X SoC
         items:
           - enum:
-              - awz,gsking-x
               - azw,gtking
               - azw,gtking-pro
               - hardkernel,odroid-n2
@@ -163,12 +162,9 @@ properties:
       - description: Boards with the Amlogic Meson SM1 S905X3/D3/Y3 SoC
         items:
           - enum:
-              - amediatech,x96-air-2g
-              - amediatech,x96-air-4g
-              - cyx,a95xf3-air
-              - hardkernel,odroid-c4
-              - khadas,vim3l
               - seirobotics,sei610
+              - khadas,vim3l
+              - hardkernel,odroid-c4
           - const: amlogic,sm1
 
       - description: Boards with the Amlogic Meson A1 A113L SoC

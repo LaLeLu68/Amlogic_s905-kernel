@@ -14,6 +14,7 @@
 #include <drm/drm_edid.h>
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/drm_simple_kms_helper.h>
 
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_vop.h"
@@ -78,88 +79,80 @@ struct rockchip_hdmi {
 
 static const struct dw_hdmi_mpll_config rockchip_mpll_cfg[] = {
 	{
-		30666000, {
-			{ 0x00b3, 0x0000 },
-			{ 0x2153, 0x0000 },
-			{ 0x40f3, 0x0000 },
+		27000000, {
+			{ 0x00b3, 0x0000},
+			{ 0x2153, 0x0000},
+			{ 0x40f3, 0x0000}
 		},
-	},  {
-		36800000, {
-			{ 0x00b3, 0x0000 },
-			{ 0x2153, 0x0000 },
-			{ 0x40a2, 0x0001 },
+	}, {
+		36000000, {
+			{ 0x00b3, 0x0000},
+			{ 0x2153, 0x0000},
+			{ 0x40f3, 0x0000}
 		},
-	},  {
-		46000000, {
-			{ 0x00b3, 0x0000 },
-			{ 0x2142, 0x0001 },
-			{ 0x40a2, 0x0001 },
+	}, {
+		40000000, {
+			{ 0x00b3, 0x0000},
+			{ 0x2153, 0x0000},
+			{ 0x40f3, 0x0000}
 		},
-	},  {
-		61333000, {
-			{ 0x0072, 0x0001 },
-			{ 0x2142, 0x0001 },
-			{ 0x40a2, 0x0001 },
+	}, {
+		54000000, {
+			{ 0x0072, 0x0001},
+			{ 0x2142, 0x0001},
+			{ 0x40a2, 0x0001},
 		},
-	},  {
-		73600000, {
-			{ 0x0072, 0x0001 },
-			{ 0x2142, 0x0001 },
-			{ 0x4061, 0x0002 },
+	}, {
+		65000000, {
+			{ 0x0072, 0x0001},
+			{ 0x2142, 0x0001},
+			{ 0x40a2, 0x0001},
 		},
-	},  {
-		92000000, {
-			{ 0x0072, 0x0001 },
-			{ 0x2145, 0x0002 },
-			{ 0x4061, 0x0002 },
+	}, {
+		66000000, {
+			{ 0x013e, 0x0003},
+			{ 0x217e, 0x0002},
+			{ 0x4061, 0x0002}
 		},
-	},  {
-		122666000, {
-			{ 0x0051, 0x0002 },
-			{ 0x2145, 0x0002 },
-			{ 0x4061, 0x0002 },
+	}, {
+		74250000, {
+			{ 0x0072, 0x0001},
+			{ 0x2145, 0x0002},
+			{ 0x4061, 0x0002}
 		},
-	},  {
-		147200000, {
-			{ 0x0051, 0x0002 },
-			{ 0x2145, 0x0002 },
-			{ 0x4064, 0x0003 },
+	}, {
+		83500000, {
+			{ 0x0072, 0x0001},
 		},
-	},  {
-		184000000, {
-			{ 0x0051, 0x0002 },
-			{ 0x214c, 0x0003 },
-			{ 0x4064, 0x0003 },
+	}, {
+		108000000, {
+			{ 0x0051, 0x0002},
+			{ 0x2145, 0x0002},
+			{ 0x4061, 0x0002}
 		},
-	},  {
-		226666000, {
-			{ 0x0040, 0x0003 },
-			{ 0x214c, 0x0003 },
-			{ 0x4064, 0x0003 },
+	}, {
+		106500000, {
+			{ 0x0051, 0x0002},
+			{ 0x2145, 0x0002},
+			{ 0x4061, 0x0002}
 		},
-	},  {
-		272000000, {
-			{ 0x0040, 0x0003 },
-			{ 0x214c, 0x0003 },
-			{ 0x5a64, 0x0003 },
+	}, {
+		146250000, {
+			{ 0x0051, 0x0002},
+			{ 0x2145, 0x0002},
+			{ 0x4061, 0x0002}
 		},
-	},  {
-		340000000, {
-			{ 0x0040, 0x0003 },
-			{ 0x3b4c, 0x0003 },
-			{ 0x5a64, 0x0003 },
+	}, {
+		148500000, {
+			{ 0x0051, 0x0003},
+			{ 0x214c, 0x0003},
+			{ 0x4064, 0x0003}
 		},
-	},  {
-		600000000, {
-			{ 0x1a40, 0x0003 },
-			{ 0x3b4c, 0x0003 },
-			{ 0x5a64, 0x0003 },
-		},
-	},  {
+	}, {
 		~0UL, {
-			{ 0x0000, 0x0000 },
-			{ 0x0000, 0x0000 },
-			{ 0x0000, 0x0000 },
+			{ 0x00a0, 0x000a },
+			{ 0x2001, 0x000f },
+			{ 0x4002, 0x000f },
 		},
 	}
 };
@@ -167,8 +160,20 @@ static const struct dw_hdmi_mpll_config rockchip_mpll_cfg[] = {
 static const struct dw_hdmi_curr_ctrl rockchip_cur_ctr[] = {
 	/*      pixelclk    bpp8    bpp10   bpp12 */
 	{
-		600000000, { 0x0000, 0x0000, 0x0000 },
-	},  {
+		40000000,  { 0x0018, 0x0018, 0x0018 },
+	}, {
+		65000000,  { 0x0028, 0x0028, 0x0028 },
+	}, {
+		66000000,  { 0x0038, 0x0038, 0x0038 },
+	}, {
+		74250000,  { 0x0028, 0x0038, 0x0038 },
+	}, {
+		83500000,  { 0x0028, 0x0038, 0x0038 },
+	}, {
+		146250000, { 0x0038, 0x0038, 0x0038 },
+	}, {
+		148500000, { 0x0000, 0x0038, 0x0038 },
+	}, {
 		~0UL,      { 0x0000, 0x0000, 0x0000},
 	}
 };
@@ -176,9 +181,8 @@ static const struct dw_hdmi_curr_ctrl rockchip_cur_ctr[] = {
 static const struct dw_hdmi_phy_config rockchip_phy_config[] = {
 	/*pixelclk   symbol   term   vlev*/
 	{ 74250000,  0x8009, 0x0004, 0x0272},
-	{ 165000000, 0x802b, 0x0004, 0x0209},
+	{ 148500000, 0x802b, 0x0004, 0x028d},
 	{ 297000000, 0x8039, 0x0005, 0x028d},
-	{ 594000000, 0x8039, 0x0000, 0x019d},
 	{ ~0UL,	     0x0000, 0x0000, 0x0000}
 };
 
@@ -216,67 +220,27 @@ static int rockchip_hdmi_parse_dt(struct rockchip_hdmi *hdmi)
 }
 
 static enum drm_mode_status
-dw_hdmi_rockchip_mode_valid(struct drm_connector *connector,
+dw_hdmi_rockchip_mode_valid(struct dw_hdmi *hdmi, void *data,
+			    const struct drm_display_info *info,
 			    const struct drm_display_mode *mode)
 {
-	struct drm_display_info *info = &connector->display_info;
-	int clock = mode->clock;
+	const struct dw_hdmi_mpll_config *mpll_cfg = rockchip_mpll_cfg;
+	int pclk = mode->clock * 1000;
+	bool valid = false;
+	int i;
 
-	if (mode->hdisplay > 3840)
-		return MODE_VIRTUAL_X;
+	for (i = 0; mpll_cfg[i].mpixelclock != (~0UL); i++) {
+		if (pclk == mpll_cfg[i].mpixelclock) {
+			valid = true;
+			break;
+		}
+	}
 
-	if (mode->vdisplay > 2160)
-		return MODE_VIRTUAL_Y;
-
-	if (connector->ycbcr_420_allowed && drm_mode_is_420(info, mode) &&
-	    (info->color_formats & DRM_COLOR_FORMAT_YCRCB420))
-		clock /= 2;
-
-	if (clock > 340000 ||
-	    (info->max_tmds_clock && clock > info->max_tmds_clock))
-		return MODE_CLOCK_HIGH;
-
-	return MODE_OK;
+	return (valid) ? MODE_OK : MODE_BAD;
 }
-
-static const struct drm_encoder_funcs dw_hdmi_rockchip_encoder_funcs = {
-	.destroy = drm_encoder_cleanup,
-};
 
 static void dw_hdmi_rockchip_encoder_disable(struct drm_encoder *encoder)
 {
-}
-
-/*
- * The VESA DMT standard specifies a 0.5% pixel clock frequency tolerance.
- * The CVT spec reuses that tolerance in its examples.
- */
-#define	CLOCK_TOLERANCE_PER_MILLE	5
-
-static enum drm_mode_status
-dw_hdmi_rockchip_encoder_mode_valid(struct drm_encoder *encoder,
-				    const struct drm_display_mode *mode)
-{
-	struct rockchip_hdmi *hdmi = to_rockchip_hdmi(encoder);
-	long rounded_rate;
-	long lowest, highest;
-
-	if (hdmi->vpll_clk) {
-		rounded_rate = clk_round_rate(hdmi->vpll_clk,
-					      mode->clock * 1000 + 999);
-		if (rounded_rate < 0)
-			return MODE_NOCLOCK;
-
-		lowest = mode->clock * (1000 - CLOCK_TOLERANCE_PER_MILLE);
-		if (rounded_rate < lowest)
-			return MODE_CLOCK_LOW;
-
-		highest = mode->clock * (1000 + CLOCK_TOLERANCE_PER_MILLE);
-		if (rounded_rate > highest)
-			return MODE_CLOCK_HIGH;
-	}
-
-	return MODE_OK;
 }
 
 static bool
@@ -340,7 +304,6 @@ dw_hdmi_rockchip_encoder_atomic_check(struct drm_encoder *encoder,
 }
 
 static const struct drm_encoder_helper_funcs dw_hdmi_rockchip_encoder_helper_funcs = {
-	.mode_valid = dw_hdmi_rockchip_encoder_mode_valid,
 	.mode_fixup = dw_hdmi_rockchip_encoder_mode_fixup,
 	.mode_set   = dw_hdmi_rockchip_encoder_mode_set,
 	.enable     = dw_hdmi_rockchip_encoder_enable,
@@ -349,11 +312,10 @@ static const struct drm_encoder_helper_funcs dw_hdmi_rockchip_encoder_helper_fun
 };
 
 static int dw_hdmi_rockchip_genphy_init(struct dw_hdmi *dw_hdmi, void *data,
-			     struct drm_display_mode *mode)
+					const struct drm_display_info *display,
+					const struct drm_display_mode *mode)
 {
 	struct rockchip_hdmi *hdmi = (struct rockchip_hdmi *)data;
-
-	dw_hdmi_set_high_tmds_clock_ratio(dw_hdmi);
 
 	return phy_power_on(hdmi->phy);
 }
@@ -443,6 +405,9 @@ static struct rockchip_hdmi_chip_data rk3228_chip_data = {
 
 static const struct dw_hdmi_plat_data rk3228_hdmi_drv_data = {
 	.mode_valid = dw_hdmi_rockchip_mode_valid,
+	.mpll_cfg = rockchip_mpll_cfg,
+	.cur_ctr = rockchip_cur_ctr,
+	.phy_config = rockchip_phy_config,
 	.phy_data = &rk3228_chip_data,
 	.phy_ops = &rk3228_hdmi_phy_ops,
 	.phy_name = "inno_dw_hdmi_phy2",
@@ -477,6 +442,9 @@ static struct rockchip_hdmi_chip_data rk3328_chip_data = {
 
 static const struct dw_hdmi_plat_data rk3328_hdmi_drv_data = {
 	.mode_valid = dw_hdmi_rockchip_mode_valid,
+	.mpll_cfg = rockchip_mpll_cfg,
+	.cur_ctr = rockchip_cur_ctr,
+	.phy_config = rockchip_phy_config,
 	.phy_data = &rk3328_chip_data,
 	.phy_ops = &rk3328_hdmi_phy_ops,
 	.phy_name = "inno_dw_hdmi_phy2",
@@ -543,7 +511,6 @@ static int dw_hdmi_rockchip_bind(struct device *dev, struct device *master,
 	hdmi->dev = &pdev->dev;
 	hdmi->chip_data = plat_data->phy_data;
 	plat_data->phy_data = hdmi;
-	plat_data->input_bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 	encoder = &hdmi->encoder;
 
 	encoder->possible_crtcs = drm_of_find_possible_crtcs(drm, dev->of_node);
@@ -578,8 +545,7 @@ static int dw_hdmi_rockchip_bind(struct device *dev, struct device *master,
 	}
 
 	drm_encoder_helper_add(encoder, &dw_hdmi_rockchip_encoder_helper_funcs);
-	drm_encoder_init(drm, encoder, &dw_hdmi_rockchip_encoder_funcs,
-			 DRM_MODE_ENCODER_TMDS, NULL);
+	drm_simple_encoder_init(drm, encoder, DRM_MODE_ENCODER_TMDS);
 
 	platform_set_drvdata(pdev, hdmi);
 

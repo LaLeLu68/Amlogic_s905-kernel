@@ -266,7 +266,8 @@
 	pinctrl-names = "default";
 
 	rtc: rtc@51 {
-		status = "okay";
+		/* has to be enabled manually when a battery is connected: */
+		status = "disabled";
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
 		#clock-cells = <0>;
@@ -417,6 +418,7 @@
 	vref-supply = <&vddio_ao18>;
 };
 
-&usb0 {
+&usb {
 	status = "okay";
+	dr_mode = "peripheral";
 };

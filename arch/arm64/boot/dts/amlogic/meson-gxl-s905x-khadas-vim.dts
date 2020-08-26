@@ -97,7 +97,8 @@
 	pinctrl-names = "default";
 
 	rtc: rtc@51 {
-		status = "okay";
+		/* has to be enabled manually when a battery is connected: */
+		status = "disabled";
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
 		#clock-cells = <0>;
@@ -205,4 +206,8 @@
 	status = "okay";
 	pinctrl-0 = <&uart_ao_b_pins>;
 	pinctrl-names = "default";
+};
+
+&usb {
+	dr_mode = "peripheral";
 };

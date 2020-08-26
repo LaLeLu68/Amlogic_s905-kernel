@@ -16,7 +16,6 @@
 	aliases {
 		serial0 = &uart_AO;
 		ethernet0 = &ethmac;
-		rtc1 = &vrtc;
 	};
 
 	chosen {
@@ -302,18 +301,6 @@
 	pinctrl-names = "default";
 };
 
-&i2c3 {
-	status = "okay";
-	pinctrl-0 = <&i2c3_sda_a_pins>, <&i2c3_sck_a_pins>;
-	pinctrl-names = "default";
-
-	rtc@51 {
-		compatible = "haoyu,hym8563";
-		reg = <0x51>;
-		#clock-cells = <0>;
-	};
-};
-
 &pwm_ab {
 	pinctrl-0 = <&pwm_a_e_pins>;
 	pinctrl-names = "default";
@@ -394,9 +381,7 @@
 
 	bus-width = <8>;
 	cap-mmc-highspeed;
-	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
-	max-frequency = <200000000>;
+	max-frequency = <100000000>;
 	disable-wp;
 
 	mmc-pwrseq = <&emmc_pwrseq>;

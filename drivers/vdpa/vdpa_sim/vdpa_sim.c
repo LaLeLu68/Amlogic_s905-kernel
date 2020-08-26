@@ -103,7 +103,7 @@ static void vdpasim_queue_ready(struct vdpasim *vdpasim, unsigned int idx)
 
 static void vdpasim_vq_reset(struct vdpasim_virtqueue *vq)
 {
-	vq->ready = 0;
+	vq->ready = false;
 	vq->desc_addr = 0;
 	vq->driver_addr = 0;
 	vq->device_addr = 0;
@@ -135,9 +135,10 @@ static void vdpasim_work(struct work_struct *work)
 						 vdpasim, work);
 	struct vdpasim_virtqueue *txq = &vdpasim->vqs[1];
 	struct vdpasim_virtqueue *rxq = &vdpasim->vqs[0];
-	size_t read, write, total_write;
-	int err;
+	ssize_t read, write;
+	size_t total_write;
 	int pkts = 0;
+	int err;
 
 	spin_lock(&vdpasim->lock);
 
@@ -330,6 +331,7 @@ static struct vdpasim *vdpasim_create(void)
 
 	INIT_WORK(&vdpasim->work, vdpasim_work);
 	spin_lock_init(&vdpasim->lock);
+	spin_lock_init(&vdpasim->iommu_lock);
 
 	dev = &vdpasim->vdpa.dev;
 	dev->coherent_dma_mask = DMA_BIT_MASK(64);
@@ -520,7 +522,7 @@ static void vdpasim_get_config(struct vdpa_device *vdpa, unsigned int offset,
 	struct vdpasim *vdpasim = vdpa_to_sim(vdpa);
 
 	if (offset + len < sizeof(struct virtio_net_config))
-		memcpy(buf, &vdpasim->config + offset, len);
+		memcpy(buf, (u8 *)&vdpasim->config + offset, len);
 }
 
 static void vdpasim_set_config(struct vdpa_device *vdpa, unsigned int offset,

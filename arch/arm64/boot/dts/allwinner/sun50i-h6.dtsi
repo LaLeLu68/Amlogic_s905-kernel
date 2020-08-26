@@ -163,6 +163,7 @@
 				clock-names = "bus",
 					      "mod";
 				resets = <&display_clocks RST_MIXER0>;
+				iommus = <&iommu 0>;
 
 				ports {
 					#address-cells = <1>;
@@ -199,71 +200,7 @@
 			resets = <&ccu RST_BUS_VE>;
 			interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 			allwinner,sram = <&ve_sram 1>;
-		};
-
-		gpu_opp_table: opp-table2 {
-			compatible = "operating-points-v2";
-
-			opp00 {
-				opp-hz = /bits/ 64 <756000000>;
-				opp-microvolt = <1040000>;
-			};
-			opp01 {
-				opp-hz = /bits/ 64 <624000000>;
-				opp-microvolt = <950000>;
-			};
-			opp02 {
-				opp-hz = /bits/ 64 <576000000>;
-				opp-microvolt = <930000>;
-			};
-			opp03 {
-				opp-hz = /bits/ 64 <540000000>;
-				opp-microvolt = <910000>;
-			};
-			opp04 {
-				opp-hz = /bits/ 64 <504000000>;
-				opp-microvolt = <890000>;
-			};
-			opp05 {
-				opp-hz = /bits/ 64 <456000000>;
-				opp-microvolt = <870000>;
-			};
-			opp06 {
-				opp-hz = /bits/ 64 <432000000>;
-				opp-microvolt = <860000>;
-			};
-			opp07 {
-				opp-hz = /bits/ 64 <420000000>;
-				opp-microvolt = <850000>;
-			};
-			opp08 {
-				opp-hz = /bits/ 64 <408000000>;
-				opp-microvolt = <840000>;
-			};
-			opp09 {
-				opp-hz = /bits/ 64 <384000000>;
-				opp-microvolt = <830000>;
-			};
-			opp10 {
-				opp-hz = /bits/ 64 <360000000>;
-				opp-microvolt = <820000>;
-			};
-			opp11 {
-				opp-hz = /bits/ 64 <336000000>;
-				opp-microvolt = <810000>;
-			};
-			opp12 {
-				opp-hz = /bits/ 64 <312000000>;
-				opp-microvolt = <810000>;
-			};
-			opp13 {
-				opp-hz = /bits/ 64 <264000000>;
-				opp-microvolt = <810000>;
-			};
-			opp14 {
-				opp-hz = /bits/ 64 <216000000>;
-				opp-microvolt = <810000>;
-			};
+			iommus = <&iommu 3>;
 		};
 
 		gpu: gpu@1800000 {
@@ -277,7 +214,6 @@
 			clocks = <&ccu CLK_GPU>, <&ccu CLK_BUS_GPU>;
 			clock-names = "core", "bus";
 			resets = <&ccu RST_BUS_GPU>;
-			operating-points-v2 = <&gpu_opp_table>;
 			status = "disabled";
 		};
 
@@ -346,6 +282,16 @@
 			dma-requests = <46>;
 			resets = <&ccu RST_BUS_DMA>;
 			#dma-cells = <1>;
+		};
+
+		msgbox: mailbox@3003000 {
+			compatible = "allwinner,sun50i-h6-msgbox",
+				     "allwinner,sun6i-a31-msgbox";
+			reg = <0x03003000 0x1000>;
+			clocks = <&ccu CLK_BUS_MSGBOX>;
+			resets = <&ccu RST_BUS_MSGBOX>;
+			interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
+			#mbox-cells = <1>;
 		};
 
 		sid: efuse@3006000 {
@@ -527,6 +473,15 @@
 			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
 			interrupt-controller;
 			#interrupt-cells = <3>;
+		};
+
+		iommu: iommu@30f0000 {
+			compatible = "allwinner,sun50i-h6-iommu";
+			reg = <0x030f0000 0x10000>;
+			interrupts = <GIC_SPI 57 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_IOMMU>;
+			resets = <&ccu RST_BUS_IOMMU>;
+			#iommu-cells = <1>;
 		};
 
 		mmc0: mmc@4020000 {

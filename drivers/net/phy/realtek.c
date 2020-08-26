@@ -11,6 +11,7 @@
 #include <linux/bitops.h>
 #include <linux/phy.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 
 #define RTL821x_PHYSR				0x11
 #define RTL821x_PHYSR_DUPLEX			BIT(13)
@@ -210,11 +211,11 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		dev_err(dev, "Failed to update the TX delay register\n");
 		return ret;
 	} else if (ret) {
-		dev_err(dev,
+		dev_dbg(dev,
 			"%s 2ns TX delay (and changing the value from pin-strapping RXD1 or the bootloader)\n",
 			val_txdly ? "Enabling" : "Disabling");
 	} else {
-		dev_err(dev,
+		dev_dbg(dev,
 			"2ns TX delay was already %s (by pin-strapping RXD1 or bootloader configuration)\n",
 			val_txdly ? "enabled" : "disabled");
 	}
@@ -225,11 +226,11 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		dev_err(dev, "Failed to update the RX delay register\n");
 		return ret;
 	} else if (ret) {
-		dev_err(dev,
+		dev_dbg(dev,
 			"%s 2ns RX delay (and changing the value from pin-strapping RXD0 or the bootloader)\n",
 			val_rxdly ? "Enabling" : "Disabling");
 	} else {
-		dev_err(dev,
+		dev_dbg(dev,
 			"2ns RX delay was already %s (by pin-strapping RXD0 or bootloader configuration)\n",
 			val_rxdly ? "enabled" : "disabled");
 	}
@@ -526,6 +527,16 @@ static int rtl8125_match_phy_device(struct phy_device *phydev)
 	       rtlgen_supports_2_5gbps(phydev);
 }
 
+static int rtlgen_resume(struct phy_device *phydev)
+{
+	int ret = genphy_resume(phydev);
+
+	/* Internal PHY's from RTL8168h up may not be instantly ready */
+	msleep(20);
+
+	return ret;
+}
+
 static struct phy_driver realtek_drvs[] = {
 	{
 		PHY_ID_MATCH_EXACT(0x00008201),
@@ -609,7 +620,7 @@ static struct phy_driver realtek_drvs[] = {
 		.match_phy_device = rtlgen_match_phy_device,
 		.read_status	= rtlgen_read_status,
 		.suspend	= genphy_suspend,
-		.resume		= genphy_resume,
+		.resume		= rtlgen_resume,
 		.read_page	= rtl821x_read_page,
 		.write_page	= rtl821x_write_page,
 		.read_mmd	= rtlgen_read_mmd,
@@ -621,7 +632,7 @@ static struct phy_driver realtek_drvs[] = {
 		.config_aneg	= rtl8125_config_aneg,
 		.read_status	= rtl8125_read_status,
 		.suspend	= genphy_suspend,
-		.resume		= genphy_resume,
+		.resume		= rtlgen_resume,
 		.read_page	= rtl821x_read_page,
 		.write_page	= rtl821x_write_page,
 		.read_mmd	= rtl8125_read_mmd,
